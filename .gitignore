@@ -1,0 +1,27 @@
+# Runtime data: SQLite database and uploaded documents/images.
+# The app reseeds a demo tenant on startup if no database exists.
+data/
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Secrets and local provider configuration
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
