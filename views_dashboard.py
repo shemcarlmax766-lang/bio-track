@@ -165,7 +165,7 @@ def index():
               FROM fault_reports f
               JOIN equipment e ON e.id = f.equipment_id
               LEFT JOIN departments d ON d.id = f.department_id
-             WHERE f.hospital_id = ?{scope_sql.replace('e.', 'e.')}
+             WHERE f.hospital_id = ?{scope_sql}
              ORDER BY f.reported_at DESC LIMIT 8""",
         [hid] + scope_params,
     )

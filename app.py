@@ -85,11 +85,15 @@ def create_app():
 def _before_request():
     if request.endpoint == "static":
         return
-    scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+    # Secure cookie flag follows the effective request scheme (ProxyFix has already
+    # applied X-Forwarded-Proto). COOKIE_SECURE=1/0 overrides it for TLS proxies
+    # that do not forward the scheme.
     force = os.environ.get("COOKIE_SECURE")
-    if force == "1" or (force != "0" and scheme == "https"):
-        session.permanent = False
-        request.environ["wsgi.url_scheme"] = "https"
+    session.permanent = False
+    if force == "1" or (force != "0" and request.is_secure):
+        from flask import current_app
+
+        current_app.config["SESSION_COOKIE_SECURE"] = True
     core.load_user()
     core.check_csrf()
 

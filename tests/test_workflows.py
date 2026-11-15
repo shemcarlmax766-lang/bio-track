@@ -865,5 +865,56 @@ class AuditTests(BaseCase):
         self.assertEqual(row["detail"], "Burns Unit")
 
 
+
+class RouteCrawlTests(BaseCase):
+    """Fetch every GET route as each role and fail on any 5xx."""
+
+    def _crawl(self, email):
+        self.login(email)
+        rules = []
+        for rule in self.app.url_map.iter_rules():
+            if rule.endpoint == "static" or "GET" not in rule.methods:
+                continue
+            if "<" in str(rule) and "<path:filename>" in str(rule):
+                continue
+            rules.append(str(rule))
+        failures = []
+        for path in rules:
+            probe = (
+                path.replace("<int:eid>", "1").replace("<int:fid>", "1")
+                .replace("<int:sid>", "1").replace("<int:wid>", "1")
+                .replace("<int:part_id>", "1").replace("<int:doc_id>", "1")
+                .replace("<int:uid>", "1").replace("<int:did>", "1")
+                .replace("<int:note_id>", "1").replace("<kind>", "inventory")
+                .replace("<token>", "missing-token")
+            )
+            response = self.client.get(probe)
+            if response.status_code >= 500:
+                failures.append((probe, response.status_code))
+        return failures
+
+    def test_administrator_routes_do_not_error(self):
+        self.assertEqual(self._crawl("admin@biotrack.ug"), [])
+
+    def test_engineer_routes_do_not_error(self):
+        failures = self._crawl("engineer@biotrack.ug")
+        # /admin/* and /backup are 403 for engineers, which is not a 5xx
+        self.assertEqual(failures, [])
+
+    def test_staff_routes_do_not_error(self):
+        failures = self._crawl("staff@biotrack.ug")
+        self.assertEqual(failures, [])
+
+
+class MediaScopeTests(BaseCase):
+    def test_unrelated_path_is_not_served(self):
+        self.login("admin@biotrack.ug")
+        self.assertEqual(self.client.get("/media/../README.md").status_code, 404)
+        self.assertEqual(self.client.get("/media/images/nothing.png").status_code, 404)
+
+    def test_media_requires_sign_in(self):
+        self.assertEqual(self.client.get("/media/images/x.png").status_code, 302)
+
+
 if __name__ == "__main__":
     unittest.main()

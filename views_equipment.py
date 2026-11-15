@@ -8,6 +8,7 @@ from flask import (
     Response,
     abort,
     flash,
+    redirect,
     render_template,
     request,
     send_file,
@@ -310,8 +311,6 @@ def equipment_edit(eid):
 
 
 def _redirect_after_equipment(endpoint, eid):
-    from flask import redirect, url_for
-
     return redirect(url_for(endpoint, eid=eid))
 
 
@@ -415,12 +414,30 @@ def _qr_payload(item):
     return f"{request.url_root.rstrip('/')}/q/{item['qr_token']}"
 
 
+def _owns_upload(relative_path, hospital_id):
+    """True when the stored file belongs to this hospital's records."""
+    if not relative_path:
+        return False
+    checks = (
+        "SELECT 1 FROM equipment WHERE hospital_id = ? AND image_path = ?",
+        "SELECT 1 FROM fault_reports WHERE hospital_id = ? AND photo_path = ?",
+        "SELECT 1 FROM service_documents WHERE hospital_id = ? AND stored_name = ?",
+    )
+    for sql in checks:
+        if query(sql, (hospital_id, relative_path), one=True):
+            return True
+    return False
+
+
 @bp.get("/media/<path:filename>")
 @login_required
 def media(filename):
-    """Serve uploaded images and manuals to signed-in hospital users only."""
+    """Serve uploads to signed-in users, and only for their own hospital's records."""
+    user = current_user()
     path = uploads.absolute(filename)
     if not path or not os.path.isfile(path):
+        abort(404)
+    if not _owns_upload(filename.replace(os.sep, "/"), user["hospital_id"]):
         abort(404)
     return send_file(path)
 
@@ -549,8 +566,6 @@ def document_upload():
 def document_list_response(status=302):
     """Re-render the manuals page (or redirect) after an upload attempt."""
     if status == 302:
-        from flask import redirect
-
         return redirect(url_for("equipment.document_list"))
     return equipment_documents_page(), status
 
