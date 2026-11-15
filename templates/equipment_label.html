@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}QR label · {{ item['name'] }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <h1>QR label</h1>
+    <p class="lead">Print and attach to the equipment. Scanning opens the equipment record.</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn btn-navy" type="button" onclick="window.print()">Print label</button>
+    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_detail', eid=item['id']) }}">Back to equipment</a>
+  </div>
+</div>
+
+<div class="label-sheet">
+  <div class="label">
+    <div class="l-name">{{ item['name'] }}</div>
+    <div class="l-meta">{{ item['manufacturer'] or '' }} {{ item['model_number'] or '' }}</div>
+    <img src="{{ url_for('equipment.equipment_qr', eid=item['id']) }}" alt="QR code for {{ item['name'] }}">
+    <div class="l-meta"><strong>{{ item['asset_number'] or 'No asset number' }}</strong></div>
+    <div class="l-meta">{{ item['department_name'] or '' }}{% if item['location'] %} · {{ item['location'] }}{% endif %}</div>
+    <div class="l-meta">BioTrack · {{ current_user()['hospital_name'] }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;max-width:640px">
+  <h3>What scanning does</h3>
+  <ul style="font-size:.87rem;color:var(--muted);margin:0;padding-left:18px">
+    <li>The QR code links to <code>{{ payload }}</code>.</li>
+    <li>Anyone signed out sees only a limited summary: name, asset number, status and
+      next maintenance date.</li>
+    <li>Reporting a fault requires a signed-in account in this hospital, and staff can
+      only report faults for their own department.</li>
+  </ul>
+</div>
+{% endblock %}

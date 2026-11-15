@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ schedule['name'] }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <h1>{{ schedule['name'] }}</h1>
+    <p class="lead">{{ schedule['equipment_name'] }} · every {{ schedule['frequency_days'] }} days
+      · next due {{ schedule['next_due_date'] }}</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_detail', eid=schedule['equipment_id']) }}">Equipment</a>
+    <a class="btn btn-ghost" href="{{ url_for('maintenance.maintenance_list') }}">All schedules</a>
+  </div>
+</div>
+
+<div class="split">
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Record completion</h2></div>
+      <form method="post" action="{{ url_for('maintenance.schedule_complete', sid=schedule['id']) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        {% if checklist %}
+        <table class="data" style="margin-bottom:14px">
+          <thead><tr><th>Checklist item</th><th>Result</th></tr></thead>
+          <tbody>
+          {% for item in checklist %}
+          <tr>
+            <td>{{ item }}</td>
+            <td>
+              <select name="check_{{ loop.index0 }}" required style="min-width:150px">
+                <option value="not_checked">— select —</option>
+                <option value="pass">Pass</option>
+                <option value="fail">Fail</option>
+                <option value="not_applicable">Not applicable</option>
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="hint">This schedule has no checklist items.</p>
+        {% endif %}
+        <div class="form-grid">
+          <div class="field">
+            <label for="performed_at">Performed at</label>
+            <input type="date" id="performed_at" name="performed_at" value="{{ schedule['next_due_date'] }}">
+          </div>
+          <div class="field full">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" placeholder="Measurements, adjustments and follow-up actions."></textarea>
+          </div>
+          <div class="field full">
+            <label for="verification_notes">Verification documentation</label>
+            <textarea id="verification_notes" name="verification_notes"
+                      placeholder="Tests and measured values confirming the equipment is fit for use."></textarea>
+          </div>
+          <div class="field full">
+            <label class="checkline">
+              <input type="checkbox" name="return_to_service" value="1">
+              Verified and returned to clinical service
+            </label>
+          </div>
+        </div>
+        <button class="btn btn-primary" type="submit" style="margin-top:12px">Complete maintenance</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Completion history</h2></div>
+      {% if history %}
+      <table class="data">
+        <thead><tr><th>Performed</th><th>Engineer</th><th>Results</th><th>Verified</th></tr></thead>
+        <tbody>
+        {% for h in history %}
+        <tr>
+          <td>{{ h['performed_at']|short_dt }}</td>
+          <td>{{ h['engineer_name'] or '—' }}</td>
+          <td><small>{{ h['checklist_results'] }}</small>
+            {% if h['notes'] %}<br><small>{{ h['notes'][:110] }}</small>{% endif %}</td>
+          <td>{{ ('Yes · ' ~ h['verifier']) if h['verified_at'] else 'Not recorded' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No completions recorded yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <h3>Schedule details</h3>
+      <dl class="dl">
+        <dt>Equipment</dt><dd>{{ schedule['equipment_name'] }}</dd>
+        <dt>Department</dt><dd>{{ schedule['department_name'] or '—' }}</dd>
+        <dt>Interval</dt><dd>Every {{ schedule['frequency_days'] }} days</dd>
+        <dt>Source</dt><dd>{{ reference_types.get(schedule['reference_type'], schedule['reference_type']) }}</dd>
+        <dt>Reference</dt><dd>{{ schedule['reference'] }}</dd>
+        <dt>Last completed</dt><dd>{{ schedule['last_completed_date'] or 'Never' }}</dd>
+        <dt>Next due</dt><dd>{{ schedule['next_due_date'] }}</dd>
+        <dt>Status</dt><dd>{{ 'Active' if schedule['is_active'] else 'Inactive' }}</dd>
+      </dl>
+    </div>
+    {% if schedule['is_active'] %}
+    <div class="card">
+      <form method="post" action="{{ url_for('maintenance.schedule_deactivate', sid=schedule['id']) }}"
+            data-confirm="Deactivate this schedule? Completion history is kept.">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-ghost btn-block" type="submit">Deactivate schedule</button>
+      </form>
+    </div>
+    {% endif %}
+    <div class="notice notice-warn">
+      <span>Completing maintenance records activity. Returning equipment to service requires
+      documented verification by a qualified engineer.</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

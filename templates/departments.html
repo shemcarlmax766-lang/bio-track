@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Departments{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>Departments</h1>
+    <p class="lead">Departments scope equipment visibility for hospital staff.</p></div>
+  <div class="head-actions"><a class="btn btn-ghost" href="{{ url_for('admin.categories') }}">Equipment categories</a></div>
+</div>
+<div class="split">
+  <div class="card flush">
+    <div class="card-head"><h2>Departments</h2></div>
+    <div class="table-wrap" style="border:0;border-radius:0">
+      <table class="data">
+        <thead><tr><th>Department</th><th>Equipment</th><th>Users</th><th>Rename</th></tr></thead>
+        <tbody>
+        {% for d in departments %}
+        <tr>
+          <td>{{ d['name'] }}</td>
+          <td class="num">{{ d['equipment_count'] }}</td>
+          <td class="num">{{ d['staff_count'] }}</td>
+          <td class="actions">
+            <form class="inline" method="post" action="{{ url_for('admin.department_rename', did=d['id']) }}">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <input type="text" name="name" value="{{ d['name'] }}" required
+                     style="width:170px;min-height:30px;font-size:.8rem;display:inline-block">
+              <button class="btn btn-ghost btn-sm" type="submit">Save</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Add a department</h2></div>
+    <form method="post" action="{{ url_for('admin.department_create') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field"><label for="name">Department name</label>
+        <input type="text" id="name" name="name" required placeholder="e.g. Burns Unit"></div>
+      <button class="btn btn-primary btn-block" type="submit" style="margin-top:10px">Add department</button>
+    </form>
+    <div class="notice notice-info" style="margin-top:14px">
+      <span>Ugandan facilities vary widely. Standard departments are created on registration;
+      add or rename to match your facility's structure.</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

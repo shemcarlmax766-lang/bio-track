@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Service manuals{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>Service manuals</h1>
+    <p class="lead">Uploaded manuals are indexed for BioAssist. Scanned-image OCR is not configured.</p></div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('bioassist.bioassist') }}">Open BioAssist</a>
+  </div>
+</div>
+<div class="split">
+  <div class="card flush">
+    <div class="card-head"><h2>Uploaded manuals</h2></div>
+    {% if documents %}
+    <div class="table-wrap" style="border:0;border-radius:0">
+      <table class="data">
+        <thead><tr><th>Title</th><th>Equipment</th><th>Pages</th><th>Uploaded</th><th></th></tr></thead>
+        <tbody>
+        {% for d in documents %}
+        <tr>
+          <td>{{ d['title'] }}<br><small>{{ d['filename'] }}</small></td>
+          <td>{{ d['equipment_name'] or 'All equipment' }}</td>
+          <td class="num">{{ d['page_count'] }}</td>
+          <td>{{ d['uploaded_at']|short_dt }}<br><small>{{ d['uploader'] or '' }}</small></td>
+          <td class="actions">
+            <form class="inline" method="post" action="{{ url_for('equipment.document_delete', doc_id=d['id']) }}"
+                  data-confirm="Delete this manual, stored file and extracted text?">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <button class="btn btn-ghost btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">No manuals uploaded. BioAssist will answer from general knowledge only.</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Upload a PDF manual</h2></div>
+    <form method="post" action="{{ url_for('equipment.document_upload') }}" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="stack">
+        <div class="field">
+          <label for="title">Manual title</label>
+          <input type="text" id="title" name="title" required placeholder="e.g. Savina 300 Service Manual">
+        </div>
+        <div class="field">
+          <label for="equipment_id">Link to equipment (optional)</label>
+          <select id="equipment_id" name="equipment_id">
+            <option value="">All / unlinked</option>
+            {% for e in equipment %}
+            <option value="{{ e['id'] }}">{{ e['name'] }}{% if e['asset_number'] %} · {{ e['asset_number'] }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="manual">PDF file</label>
+          <input type="file" id="manual" name="manual" accept="application/pdf" required>
+          <span class="hint">Up to 20 MB. Text must be selectable (not a scanned image).</span>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Upload and index</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

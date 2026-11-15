@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ part['name'] }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>{{ part['name'] }}</h1>
+    <p class="lead">{{ part['part_number'] }} · stock {{ part['quantity'] }} (minimum {{ part['min_stock'] }})</p></div>
+  <div class="head-actions"><a class="btn btn-ghost" href="{{ url_for('admin.parts') }}">All parts</a></div>
+</div>
+<div class="split">
+  <div class="card flush">
+    <div class="card-head"><h2>Movement ledger</h2></div>
+    {% if ledger %}
+    <div class="table-wrap" style="border:0;border-radius:0">
+      <table class="data">
+        <thead><tr><th>When</th><th>Type</th><th>Change</th><th>Balance</th><th>Reason</th><th>By</th></tr></thead>
+        <tbody>
+        {% for t in ledger %}
+        <tr>
+          <td>{{ t['created_at']|short_dt }}</td>
+          <td><span class="pill pill-{{ 'operational' if t['kind'] == 'receipt' else ('critical' if t['kind'] == 'issue' else 'assigned') }}">{{ t['kind'] }}</span></td>
+          <td class="num">{{ '%+d'|format(t['quantity_delta']) }}</td>
+          <td class="num">{{ t['balance_after'] }}</td>
+          <td>{{ t['reason'] }}</td>
+          <td>{{ t['user_name'] or '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p class="empty">No movements recorded.</p>{% endif %}
+  </div>
+  <div class="stack">
+    <div class="card">
+      <h3>Record a movement</h3>
+      <form method="post" action="{{ url_for('admin.part_movement', part_id=part['id']) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="stack">
+          <div class="field"><label for="kind">Movement type</label>
+            <select id="kind" name="kind">
+              <option value="receipt">Receipt (delivery)</option>
+              <option value="issue">Issue (used on a repair)</option>
+              <option value="correction">Stock correction</option>
+            </select></div>
+          <div class="field"><label for="direction">Direction (corrections only)</label>
+            <select id="direction" name="direction">
+              <option value="increase">Increase</option><option value="decrease">Decrease</option>
+            </select></div>
+          <div class="field"><label for="quantity">Quantity</label>
+            <input type="number" id="quantity" name="quantity" min="1" value="1" required></div>
+          <div class="field"><label for="reason">Reason</label>
+            <input type="text" id="reason" name="reason" required></div>
+          <div class="field"><label for="work_order_id">Related work order (optional)</label>
+            <select id="work_order_id" name="work_order_id"><option value="">None</option>
+              {% for w in work_orders %}
+              <option value="{{ w['id'] }}">#{{ w['id'] }} {{ w['equipment_name'] }}</option>
+              {% endfor %}
+            </select></div>
+          <button class="btn btn-primary btn-block" type="submit">Record movement</button>
+        </div>
+      </form>
+    </div>
+    <div class="card">
+      <h3>Part details</h3>
+      <dl class="dl">
+        <dt>Manufacturer</dt><dd>{{ part['manufacturer'] or '—' }}</dd>
+        <dt>Compatible equipment</dt><dd>{{ part['compatible_equipment'] or '—' }}</dd>
+        <dt>Supplier</dt><dd>{{ part['supplier'] or '—' }}</dd>
+        <dt>Purchased</dt><dd>{{ part['purchase_date'] or '—' }}</dd>
+        <dt>Storage location</dt><dd>{{ part['storage_location'] or '—' }}</dd>
+        <dt>Unit cost</dt><dd>{{ part['unit_cost_ugx']|ugx }}</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}

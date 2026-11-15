@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Equipment scan{% endblock %}
+{% block body %}
+<div class="auth-card wide">
+  <div class="auth-head">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="40" height="40">
+    <h1>{{ item['name'] }}</h1>
+    <p>{{ item['hospital_name'] }}</p>
+  </div>
+
+  <dl class="dl">
+    <dt>Asset number</dt><dd><code>{{ item['asset_number'] or 'Not recorded' }}</code></dd>
+    <dt>Department</dt><dd>{{ item['department_name'] or 'Unassigned' }}</dd>
+    <dt>Operational status</dt>
+    <dd><span class="pill pill-{{ item['status'] }}">{{ item['status']|label }}</span></dd>
+    <dt>Next maintenance</dt>
+    <dd>{{ item['next_maintenance_date'] or 'Not scheduled' }}</dd>
+    <dt>Clinical use</dt>
+    <dd>
+      {% if item['clinical_use_blocked'] %}
+      <span class="pill pill-critical">Flagged not safe for clinical use</span>
+      {% else %}
+      <span class="pill pill-operational">No restriction recorded</span>
+      {% endif %}
+    </dd>
+  </dl>
+
+  {% if item['clinical_use_blocked'] %}
+  <div class="notice notice-danger" style="margin-top:14px">
+    <span>This equipment is currently restricted. Do not use it for patient care until a
+    qualified biomedical engineer has verified it.</span>
+  </div>
+  {% endif %}
+
+  <div class="notice notice-info" style="margin-top:14px">
+    <span>This public view deliberately shows a limited summary. Serial numbers, service
+    history and documents are only available to signed-in hospital staff.</span>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+    {% if can_report %}
+    <a class="btn btn-primary btn-block" href="{{ url_for('faults.fault_new', equipment_id=item['id']) }}">Report a fault</a>
+    <a class="btn btn-ghost btn-block" href="{{ url_for('equipment.equipment_detail', eid=item['id']) }}">Open full equipment record</a>
+    {% elif signed_in %}
+    <div class="notice notice-warn">
+      <span>This equipment belongs to another hospital. You cannot report faults for it.</span>
+    </div>
+    {% else %}
+    <a class="btn btn-primary btn-block"
+       href="{{ url_for('auth.login', next=url_for('faults.fault_new', equipment_id=item['id'])) }}">
+      Sign in to report a fault</a>
+    <p style="text-align:center;font-size:.8rem;color:var(--muted);margin:0">
+      Sign-in is required so that every reported fault is attributable.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

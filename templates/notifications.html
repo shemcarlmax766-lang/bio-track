@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>Notifications</h1>
+    <p class="lead">In-app notifications. Email delivery is not configured on this server.</p></div>
+  <div class="head-actions">
+    <form method="post" action="{{ url_for('auth.mark_all_read') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-ghost" type="submit">Mark all as read</button>
+    </form>
+  </div>
+</div>
+{% if notifications %}
+<div class="stack">
+  {% for n in notifications %}
+  <div class="card" style="display:flex;gap:12px;align-items:flex-start">
+    <span class="pill pill-{{ 'operational' if n['read_at'] else 'under_review' }}">
+      {{ 'Read' if n['read_at'] else 'New' }}</span>
+    <div style="flex:1">
+      <div style="font-size:.88rem">{{ n['message'] }}</div>
+      <small style="color:var(--muted)">{{ n['kind']|label }} · {{ n['created_at']|short_dt }}</small>
+    </div>
+    <div style="display:flex;gap:6px">
+      {% if n['link'] %}<a class="btn btn-ghost btn-sm" href="{{ n['link'] }}">Open</a>{% endif %}
+      {% if not n['read_at'] %}
+      <form method="post" action="{{ url_for('auth.mark_read', note_id=n['id']) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ url_for('auth.notifications') }}">
+        <button class="btn btn-ghost btn-sm" type="submit">Mark read</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><p class="empty">You have no notifications.</p></div>
+{% endif %}
+{% endblock %}

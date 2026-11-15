@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Faults{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <h1>Fault reports</h1>
+    <p class="lead">{{ faults|length }} report(s) · critical and high severity listed first</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-primary" href="{{ url_for('faults.fault_new') }}">Report a fault</a>
+    {% if current_user()['role_code'] in ('engineer', 'administrator') %}
+    <a class="btn btn-ghost" href="{{ url_for('faults.work_order_list') }}">Work orders</a>
+    {% endif %}
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">All</option>
+      {% for s in FAULT_STATUSES %}
+      <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s|label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="severity">Severity</label>
+    <select id="severity" name="severity">
+      <option value="">All</option>
+      {% for s in SEVERITIES %}
+      <option value="{{ s }}" {{ 'selected' if filters.severity == s }}>{{ s|capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="department">Department</label>
+    <select id="department" name="department">
+      <option value="">All</option>
+      {% for d in departments %}
+      <option value="{{ d['id'] }}" {{ 'selected' if filters.department == d['id']|string }}>{{ d['name'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field" style="flex:0 0 auto">
+    <label>&nbsp;</label>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-navy" type="submit">Filter</button>
+      <a class="btn btn-ghost" href="{{ url_for('faults.fault_list') }}">Reset</a>
+    </div>
+  </div>
+</form>
+
+{% if faults %}
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr><th>Equipment</th><th>Department</th><th>Severity</th><th>Status</th>
+        <th>Reported</th><th>Engineer</th></tr>
+    </thead>
+    <tbody>
+    {% for f in faults %}
+    <tr>
+      <td><a href="{{ url_for('faults.fault_detail', fid=f['id']) }}"><strong>{{ f['equipment_name'] }}</strong></a>
+        <br><small>{{ (f['description'] or '')[:70] }}…</small></td>
+      <td>{{ f['department_name'] or '—' }}</td>
+      <td><span class="pill pill-{{ f['severity'] }}">{{ f['severity'] }}</span></td>
+      <td><span class="pill pill-{{ f['status'] }}">{{ f['status']|label }}</span></td>
+      <td>{{ f['reported_at']|short_dt }}</td>
+      <td>{{ f['engineer_name'] or 'Unassigned' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="empty">No fault reports match these filters.</p></div>
+{% endif %}
+{% endblock %}

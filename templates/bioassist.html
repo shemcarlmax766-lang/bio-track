@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}BioAssist{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>BioAssist</h1>
+    <p class="lead">Decision support for biomedical engineers, grounded in your uploaded manuals.</p></div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('equipment.document_list') }}">Manage manuals</a>
+  </div>
+</div>
+
+<div class="notice notice-warn" style="margin-bottom:14px">
+  <span>{{ disclaimer }}</span>
+</div>
+
+{% if not configured %}
+<div class="notice notice-info" style="margin-bottom:14px">
+  <span><strong>No AI provider is configured on this server.</strong> BioAssist will still
+  search your uploaded manuals and return the matching pages, but it will not generate
+  answers. Set <code>BIOASSIST_API_KEY</code> in the server environment to enable generated
+  responses.</span>
+</div>
+{% endif %}
+
+<div class="split">
+  <div class="card" data-bioassist>
+    <div class="chat-log">
+      <div class="msg assistant">
+        <div class="meta">BioAssist</div>
+        <pre>Ask about an error message, a troubleshooting step, a maintenance procedure or a
+manual section. Select equipment or a manual to keep answers grounded in your documents.</pre>
+      </div>
+    </div>
+    <form style="margin-top:14px">
+      <div class="form-grid">
+        <div class="field">
+          <label for="equipment_id">Equipment (optional)</label>
+          <select id="equipment_id" name="equipment_id">
+            <option value="">No specific equipment</option>
+            {% for e in equipment %}
+            <option value="{{ e['id'] }}">{{ e['name'] }}{% if e['asset_number'] %} · {{ e['asset_number'] }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="document_id">Limit to manual (optional)</label>
+          <select id="document_id" name="document_id">
+            <option value="">All manuals in this hospital</option>
+            {% for d in documents %}
+            <option value="{{ d['id'] }}">{{ d['title'] }} ({{ d['page_count'] }} pages)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field full">
+          <label for="question">Your question</label>
+          <textarea id="question" name="question" required
+            placeholder="e.g. The ventilator shows 'O2 supply failure'. What safe preliminary checks are described in the service manual?"></textarea>
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit" style="margin-top:10px">Ask BioAssist</button>
+    </form>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <h3>How answers are labelled</h3>
+      <ul style="font-size:.84rem;color:var(--muted);padding-left:18px;margin:0">
+        <li><strong>AI answer citing your manuals</strong> — generated text with manual excerpts shown.</li>
+        <li><strong>Manual excerpts only</strong> — no provider available; verbatim pages shown.</li>
+        <li><strong>General AI explanation</strong> — no manual match found in this hospital.</li>
+        <li><strong>AI unavailable</strong> — the provider failed; the reason is stated.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>What BioAssist cannot do</h3>
+      <ul style="font-size:.84rem;color:var(--muted);padding-left:18px;margin:0">
+        <li>Certify equipment as safe for clinical use.</li>
+        <li>Authorise a repair or override a safety warning.</li>
+        <li>Replace manufacturer instructions or engineering judgement.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Data sent to the provider</h3>
+      <p style="font-size:.83rem;color:var(--muted);margin:0">
+        Your question, the selected equipment record, and the top matching manual excerpts
+        from this hospital. BioTrack never sends a full database dump.
+        {% if configured %}<br><br>Model: <code>{{ model }}</code>{% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

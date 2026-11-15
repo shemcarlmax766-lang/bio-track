@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Maintenance history{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>Maintenance history</h1>
+    <p class="lead">{{ records|length }} completion record(s)</p></div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('maintenance.maintenance_list') }}">Schedules</a>
+    <a class="btn btn-navy" href="{{ url_for('reports.report_preview', kind='maintenance') }}">Maintenance report</a>
+  </div>
+</div>
+{% if records %}
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Performed</th><th>Equipment</th><th>Schedule</th><th>Engineer</th>
+      <th>Checklist</th><th>Verified</th></tr></thead>
+    <tbody>
+    {% for m in records %}
+    <tr>
+      <td>{{ m['performed_at']|short_dt }}</td>
+      <td>{{ m['equipment_name'] }}<br><small>{{ m['asset_number'] or '' }}</small></td>
+      <td>{{ m['schedule_name'] or '—' }}</td>
+      <td>{{ m['engineer_name'] or '—' }}</td>
+      <td><small>{{ m['checklist_results'] }}</small></td>
+      <td>{{ 'Yes' if m['verified_at'] else 'No' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="empty">No maintenance completed yet.</p></div>
+{% endif %}
+{% endblock %}

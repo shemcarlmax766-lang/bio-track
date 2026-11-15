@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Account{% endblock %}
+{% block body %}
+{% set user = current_user() %}
+<div class="page-head"><div><h1>Account</h1>
+  <p class="lead">{{ user['email'] }} · {{ user['role_name'] }}</p></div></div>
+<div class="split">
+  <div class="card">
+    <div class="card-head"><h2>Change password</h2></div>
+    <form method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="stack">
+        <div class="field"><label for="current_password">Current password</label>
+          <input type="password" id="current_password" name="current_password" required autocomplete="current-password"></div>
+        <div class="field"><label for="new_password">New password</label>
+          <input type="password" id="new_password" name="new_password" required minlength="10" autocomplete="new-password">
+          <span class="hint">At least 10 characters. All your sessions will be signed out.</span></div>
+        <div class="field"><label for="password_confirm">Confirm new password</label>
+          <input type="password" id="password_confirm" name="password_confirm" required autocomplete="new-password"></div>
+        <button class="btn btn-primary" type="submit">Change password</button>
+      </div>
+    </form>
+  </div>
+  <div class="stack">
+    <div class="card">
+      <h3>Your record</h3>
+      <dl class="dl">
+        <dt>Name</dt><dd>{{ user['full_name'] }}</dd>
+        <dt>Role</dt><dd>{{ user['role_name'] }}</dd>
+        <dt>Hospital</dt><dd>{{ user['hospital_name'] }}</dd>
+        <dt>Department</dt><dd>{{ user['department_name'] or '—' }}</dd>
+        <dt>Last sign-in</dt><dd>{{ user['last_login_at']|short_dt if user['last_login_at'] else '—' }}</dd>
+      </dl>
+      <form method="post" action="{{ url_for('auth.update_profile') }}" style="margin-top:14px">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field"><label for="phone">Phone</label>
+          <input type="tel" id="phone" name="phone" value="{{ user['phone'] or '' }}"></div>
+        <button class="btn btn-ghost" type="submit" style="margin-top:10px">Save contact details</button>
+      </form>
+    </div>
+    {% if user['role_code'] == 'administrator' %}
+    <div class="card">
+      <h3>Hospital backup</h3>
+      <p style="font-size:.83rem;color:var(--muted)">
+        Downloads a SQLite snapshot containing only this hospital's records. Uploaded files
+        are not included and must be backed up separately.</p>
+      <a class="btn btn-navy" href="{{ url_for('dashboard.backup') }}">Download backup</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

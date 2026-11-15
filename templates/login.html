@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block body %}
+<div class="auth-card">
+  <div class="auth-head">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="44" height="44">
+    <h1>Sign in to BioTrack</h1>
+    <p>Biomedical engineering management</p>
+  </div>
+  <form method="post" class="stack" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    {% if request.args.get('next') %}
+    <input type="hidden" name="next" value="{{ request.args.get('next') }}">
+    {% endif %}
+    <div class="field">
+      <label for="email">Email address</label>
+      <input type="email" id="email" name="email" value="{{ email }}" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+  </form>
+  <div class="auth-foot">
+    New hospital? <a href="{{ url_for('auth.register_hospital') }}">Register your facility</a>
+  </div>
+  <div class="demo-box">
+    <strong>Demonstration accounts (password: BioTrack2026!)</strong>
+    <ul>
+      <li>admin@biotrack.ug — Hospital Administrator</li>
+      <li>engineer@biotrack.ug — Biomedical Engineer</li>
+      <li>staff@biotrack.ug — Hospital Staff</li>
+    </ul>
+    Demonstration data only. Do not enter patient-identifiable information.
+  </div>
+</div>
+{% endblock %}

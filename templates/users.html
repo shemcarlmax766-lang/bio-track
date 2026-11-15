@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>Users and roles</h1>
+    <p class="lead">Role changes and suspensions take effect at the user's next sign-in.</p></div>
+</div>
+<div class="split">
+  <div class="card flush">
+    <div class="card-head"><h2>Hospital accounts</h2></div>
+    <div class="table-wrap" style="border:0;border-radius:0">
+      <table class="data">
+        <thead><tr><th>User</th><th>Role &amp; department</th><th>Status</th><th>Last sign-in</th><th>Manage</th></tr></thead>
+        <tbody>
+        {% for u in users %}
+        <tr>
+          <td><strong>{{ u['full_name'] }}</strong><br><small>{{ u['email'] }}</small></td>
+          <td>
+            <form method="post" action="{{ url_for('admin.user_update', uid=u['id']) }}">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <input type="text" name="full_name" value="{{ u['full_name'] }}" style="min-height:30px;font-size:.8rem;margin-bottom:4px">
+              <select name="role_code" style="min-height:30px;font-size:.8rem">
+                {% for r in roles %}
+                <option value="{{ r['code'] }}" {{ 'selected' if u['role_code'] == r['code'] }}>{{ r['name'] }}</option>
+                {% endfor %}
+              </select>
+              <select name="department_id" style="min-height:30px;font-size:.8rem;margin-top:4px">
+                <option value="">No department</option>
+                {% for d in departments %}
+                <option value="{{ d['id'] }}" {{ 'selected' if u['department_id'] == d['id'] }}>{{ d['name'] }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-ghost btn-sm" type="submit" style="margin-top:4px">Save</button>
+            </form>
+          </td>
+          <td>
+            {% if u['is_active'] %}<span class="pill pill-ok">Active</span>
+            {% else %}<span class="pill pill-high">Suspended</span>{% endif %}
+          </td>
+          <td>{{ u['last_login_at']|short_dt if u['last_login_at'] else 'Never' }}</td>
+          <td class="actions">
+            <form class="inline" method="post" action="{{ url_for('admin.user_active', uid=u['id']) }}"
+                  data-confirm="Change this account's active status? Their sessions will be revoked.">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <button class="btn btn-ghost btn-sm" type="submit">{{ 'Suspend' if u['is_active'] else 'Activate' }}</button>
+            </form>
+            <form class="inline" method="post" action="{{ url_for('admin.user_reset_password', uid=u['id']) }}"
+                  data-confirm="Reset this user's password?">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <input type="password" name="password" placeholder="New password" required minlength="10"
+                     style="width:130px;min-height:30px;font-size:.78rem;display:inline-block">
+              <button class="btn btn-ghost btn-sm" type="submit">Reset</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Add a user</h2></div>
+    <form method="post" action="{{ url_for('admin.user_create') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="stack">
+        <div class="field"><label for="full_name">Full name</label>
+          <input type="text" id="full_name" name="full_name" required></div>
+        <div class="field"><label for="email">Email</label>
+          <input type="email" id="email" name="email" required></div>
+        <div class="field"><label for="password">Initial password</label>
+          <input type="password" id="password" name="password" required minlength="10">
+          <span class="hint">At least 10 characters. Ask the user to change it after first sign-in.</span></div>
+        <div class="field"><label for="role_code">Role</label>
+          <select id="role_code" name="role_code">
+            {% for r in roles %}<option value="{{ r['code'] }}">{{ r['name'] }}</option>{% endfor %}
+          </select></div>
+        <div class="field"><label for="department_id">Department</label>
+          <select id="department_id" name="department_id"><option value="">No department</option>
+            {% for d in departments %}<option value="{{ d['id'] }}">{{ d['name'] }}</option>{% endfor %}
+          </select></div>
+        <button class="btn btn-primary btn-block" type="submit">Create user</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

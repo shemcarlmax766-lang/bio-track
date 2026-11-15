@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Preventive maintenance{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <h1>Preventive maintenance</h1>
+    <p class="lead">Intervals are configured per equipment and must cite a manual or
+      approved facility policy. No default interval is assumed.</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('maintenance.maintenance_records') }}">Maintenance history</a>
+  </div>
+</div>
+
+<div class="split">
+  <div class="stack">
+    <div class="card flush">
+      <div class="card-head"><h2>Active schedules</h2></div>
+      {% if schedules %}
+      <div class="table-wrap" style="border:0;border-radius:0">
+        <table class="data">
+          <thead><tr><th>Equipment</th><th>Schedule</th><th>Interval</th><th>Next due</th><th></th></tr></thead>
+          <tbody>
+          {% for s in schedules %}
+          <tr>
+            <td>{{ s['equipment_name'] }}<br><small>{{ s['department_name'] or '' }}</small></td>
+            <td><a href="{{ url_for('maintenance.schedule_detail', sid=s['id']) }}">{{ s['name'] }}</a>
+              <br><small>{{ s['reference'][:70] }}</small></td>
+            <td>{{ s['frequency_days'] }} days</td>
+            <td>
+              {% if s['overdue'] %}
+              <span class="pill pill-high">Overdue {{ s['next_due_date'] }}</span>
+              {% else %}
+              <span class="pill pill-muted">{{ s['next_due_date'] }}</span>
+              {% endif %}
+            </td>
+            <td class="actions"><a class="btn btn-ghost btn-sm" href="{{ url_for('maintenance.schedule_detail', sid=s['id']) }}">Open</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty">No preventive maintenance schedules yet.</p>
+      {% endif %}
+    </div>
+
+    <div class="card flush">
+      <div class="card-head"><h2>Recently completed</h2></div>
+      {% if completed %}
+      <div class="table-wrap" style="border:0;border-radius:0">
+        <table class="data">
+          <thead><tr><th>Equipment</th><th>Schedule</th><th>Performed</th><th>Engineer</th><th>Returned to service</th></tr></thead>
+          <tbody>
+          {% for m in completed %}
+          <tr>
+            <td>{{ m['equipment_name'] }}</td>
+            <td>{{ m['schedule_name'] or '—' }}</td>
+            <td>{{ m['performed_at']|short_dt }}</td>
+            <td>{{ m['engineer_name'] or '—' }}</td>
+            <td>{{ 'Yes, verified' if m['returned_to_service'] else 'Not recorded' }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty">No completed maintenance recorded.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Create a schedule</h2></div>
+    <form method="post" action="{{ url_for('maintenance.schedule_create') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="stack">
+        <div class="field">
+          <label for="equipment_id">Equipment</label>
+          <select id="equipment_id" name="equipment_id" required>
+            <option value="">Select equipment…</option>
+            {% for e in equipment %}
+            <option value="{{ e['id'] }}">{{ e['name'] }}{% if e['asset_number'] %} · {{ e['asset_number'] }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="name">Schedule name</label>
+          <input type="text" id="name" name="name" placeholder="e.g. Quarterly performance verification" required>
+        </div>
+        <div class="field">
+          <label for="frequency_days">Interval (days)</label>
+          <input type="number" id="frequency_days" name="frequency_days" min="1" max="3650" required
+                 placeholder="e.g. 90">
+          <span class="hint">Take this from the manufacturer recommendation or approved facility
+            policy. BioTrack does not assume a default.</span>
+        </div>
+        <div class="field">
+          <label for="reference_type">Source of the interval</label>
+          <select id="reference_type" name="reference_type" required>
+            {% for key, text in reference_types.items() %}
+            <option value="{{ key }}">{{ text }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="reference">Manual section or policy reference</label>
+          <input type="text" id="reference" name="reference" required
+                 placeholder="e.g. Service manual section 7.2 / Biomed policy 2024-04">
+        </div>
+        <div class="field">
+          <label for="next_due_date">First due date</label>
+          <input type="date" id="next_due_date" name="next_due_date" value="{{ today }}">
+        </div>
+        <div class="field">
+          <label for="checklist">Checklist (one item per line)</label>
+          <textarea id="checklist" name="checklist"
+                    placeholder="Check calibration&#10;Verify alarm limits&#10;Inspect accessories"></textarea>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Create schedule</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

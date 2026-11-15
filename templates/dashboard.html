@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block body %}
+{% set user = current_user() %}
+<div class="page-head">
+  <div>
+    <h1>{{ user['role_name'] }} dashboard</h1>
+    <p class="lead">{{ user['hospital_name'] }} · Uganda Shillings · Africa/Kampala
+      {% if user['role_code'] == 'staff' and user['department_name'] %}
+      · showing {{ user['department_name'] }}
+      {% endif %}
+    </p>
+  </div>
+  <div class="head-actions">
+    {% if user['role_code'] == 'staff' %}
+    <a class="btn btn-primary" href="{{ url_for('faults.fault_new') }}">Report a fault</a>
+    {% else %}
+    <a class="btn btn-primary" href="{{ url_for('equipment.equipment_new') }}">Register equipment</a>
+    <a class="btn btn-ghost" href="{{ url_for('faults.work_order_list') }}">Work orders</a>
+    {% endif %}
+  </div>
+</div>
+
+<form class="filters" method="get" action="{{ url_for('dashboard.index') }}">
+  <div class="field">
+    <label for="department">Department</label>
+    <select id="department" name="department">
+      <option value="">All departments</option>
+      {% for d in departments %}
+      <option value="{{ d['id'] }}" {{ 'selected' if filters.department == d['id'] }}>{{ d['name'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="category">Category</label>
+    <select id="category" name="category">
+      <option value="">All categories</option>
+      {% for c in categories %}
+      <option value="{{ c['id'] }}" {{ 'selected' if filters.category == c['id'] }}>{{ c['name'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="start">Faults from</label>
+    <input type="date" id="start" name="start" value="{{ filters.start }}">
+  </div>
+  <div class="field">
+    <label for="end">Faults to</label>
+    <input type="date" id="end" name="end" value="{{ filters.end }}">
+  </div>
+  <div class="field" style="flex:0 0 auto">
+    <label>&nbsp;</label>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-navy" type="submit">Apply</button>
+      <a class="btn btn-ghost" href="{{ url_for('dashboard.index') }}">Reset</a>
+    </div>
+  </div>
+</form>
+
+<div class="grid grid-4" style="margin-bottom:14px">
+  <div class="metric"><span class="metric-label">Registered equipment</span>
+    <span class="metric-value">{{ metrics.total }}</span>
+    <span class="metric-foot">{{ metrics.operational }} operational</span></div>
+  <div class="metric alert"><span class="metric-label">Faulty / under repair</span>
+    <span class="metric-value">{{ metrics.faulty + metrics.under_repair }}</span>
+    <span class="metric-foot">{{ metrics.awaiting_parts }} awaiting spare parts</span></div>
+  <div class="metric warn"><span class="metric-label">Overdue maintenance</span>
+    <span class="metric-value">{{ metrics.overdue }}</span>
+    <span class="metric-foot">{{ metrics.upcoming }} due within 30 days</span></div>
+  <div class="metric"><span class="metric-label">Open fault reports</span>
+    <span class="metric-value">{{ metrics.open_faults }}</span>
+    <span class="metric-foot">{{ metrics.avg_turnaround_hours }}h average turnaround</span></div>
+</div>
+
+<div class="grid grid-side" style="margin-bottom:14px">
+  <div class="card">
+    <div class="card-head">
+      <h2>Faults and repairs, last six months</h2>
+    </div>
+    <div class="bar-chart" data-chart="trend"
+         data-values='{{ {"months": chart.months, "faults": chart.faults, "repairs": chart.repairs}|tojson }}'></div>
+    <div class="legend"><span>Fault reports</span><span class="alt">Repairs documented</span></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Equipment status</h2></div>
+    <div data-chart="status" data-values='{{ chart.status|tojson }}'></div>
+    <div class="card-sub" style="margin-top:12px;margin-bottom:0">
+      Downtime recorded on closed work orders: <strong>{{ metrics.downtime_hours }} hours</strong>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-side" style="margin-bottom:14px">
+  <div class="card flush">
+    <div class="card-head"><h2>Recent fault reports</h2>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('faults.fault_list') }}">View all</a></div>
+    {% if recent_faults %}
+    <div class="table-wrap" style="border:0;border-radius:0">
+      <table class="data">
+        <thead><tr><th>Equipment</th><th>Severity</th><th>Status</th><th>Reported</th></tr></thead>
+        <tbody>
+        {% for f in recent_faults %}
+          <tr>
+            <td><a href="{{ url_for('faults.fault_detail', fid=f['id']) }}">{{ f['equipment_name'] }}</a>
+              <br><small>{{ f['department_name'] or 'Unassigned department' }}</small></td>
+            <td><span class="pill pill-{{ f['severity'] }}">{{ f['severity'] }}</span></td>
+            <td><span class="pill pill-{{ f['status'] }}">{{ f['status']|label }}</span></td>
+            <td>{{ f['reported_at']|short_dt }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">No fault reports yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Maintenance due</h2></div>
+      {% if due_soon %}
+      <div class="table-wrap" style="border:0">
+        <table class="data">
+          <tbody>
+          {% for s in due_soon %}
+            <tr>
+              <td><a href="{{ url_for('maintenance.schedule_detail', sid=s['id']) }}">{{ s['equipment_name'] }}</a>
+                <br><small>{{ s['name'] }}</small></td>
+              <td class="num">
+                <span class="pill {{ 'pill-high' if s['next_due_date'] < today else 'pill-medium' }}">{{ s['next_due_date'] }}</span>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty">Nothing due in the next 30 days.</p>
+      {% endif %}
+    </div>
+
+    {% if user['role_code'] in ('engineer', 'administrator') %}
+    <div class="card">
+      <div class="card-head"><h2>Low spare-part stock</h2>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.parts') }}">Spare parts</a></div>
+      {% if low_stock %}
+      <ul style="list-style:none;margin:0;padding:0;font-size:.85rem">
+        {% for p in low_stock %}
+        <li style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)">
+          <a href="{{ url_for('admin.part_detail', part_id=p['id']) }}">{{ p['name'] }}</a>
+          <span class="pill {{ 'pill-high' if p['quantity'] == 0 else 'pill-medium' }}">{{ p['quantity'] }} / min {{ p['min_stock'] }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="empty">All spare parts are above their minimum level.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Department equipment distribution</h2></div>
+  {% if dept_dist %}
+  {% set maxn = dept_dist|map(attribute='n')|max %}
+  <div class="dept-bars">
+    {% for d in dept_dist %}
+    <div class="row">
+      <span>{{ d['name'] }}</span>
+      <span class="track"><span class="fill" style="width:{{ (d['n'] / maxn * 100)|round(1) }}%"></span></span>
+      <span class="n">{{ d['n'] }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty">No equipment recorded for these filters.</p>
+  {% endif %}
+</div>
+{% endblock %}
