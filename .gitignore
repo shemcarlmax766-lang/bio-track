@@ -28,3 +28,6 @@ venv/
 
 # Screenshot artefacts from the responsive test harness
 .shots/
+
+# Intermediate PNG conversions
+.shots-jpg/
