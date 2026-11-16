@@ -15,6 +15,78 @@ from core import (
 )
 from db import FAULT_STATUSES, OBSTRUCTIVE_FAULT_STATUSES, today_iso
 
+DONUT_COLOURS = {
+    "operational": "#199a5c",
+    "under_repair": "#2a72d4",
+    "faulty": "#e8930c",
+    "awaiting_parts": "#8a4cc7",
+    "out_of_service": "#dc3a34",
+    "retired": "#9fb0c1",
+}
+DONUT_LABELS = {
+    "operational": "Operational",
+    "under_repair": "Under Repair",
+    "faulty": "Faulty",
+    "awaiting_parts": "Awaiting Parts",
+    "out_of_service": "Out of Service",
+    "retired": "Retired",
+}
+DONUT_ORDER = ["operational", "under_repair", "faulty", "awaiting_parts", "out_of_service"]
+
+
+def _donut(by_status, total):
+    """Pre-compute stroke properties for a simple SVG donut (r=48 => C=301.6)."""
+    circumference = 2 * 3.14159265 * 48
+    segments, offset = [], 0.0
+    for key in DONUT_ORDER:
+        value = by_status.get(key, 0)
+        if not value:
+            continue
+        length = circumference * (value / total) if total else 0
+        segments.append({
+            "key": key,
+            "label": DONUT_LABELS[key],
+            "colour": DONUT_COLOURS[key],
+            "value": value,
+            "pct": round(value / total * 100, 1) if total else 0,
+            "dash": round(length, 2),
+            "gap": round(circumference - length, 2),
+            "offset": round(-offset, 2),
+        })
+        offset += length
+    return segments
+
+
+def _line_chart(counts, labels):
+    """Coordinates for an inline SVG line chart of monthly fault counts."""
+    width, height = 340, 200
+    left, right, top, bottom = 38, 334, 14, 176
+    peak = max(counts + [1])
+    nice = max(4, ((peak + 3) // 4) * 4)
+    points = []
+    for index, value in enumerate(counts):
+        x = left + (right - left) * (index / max(1, len(counts) - 1))
+        y = bottom - (bottom - top) * (value / nice)
+        points.append({"x": round(x, 1), "y": round(y, 1), "label": labels[index], "value": value})
+    line = " ".join(f"{p['x']},{p['y']}" for p in points)
+    area = f"{left},{bottom} {line} {right},{bottom}"
+    grid = []
+    for step in range(5):
+        value = nice - nice / 4 * step
+        grid.append({
+            "y": round(top + (bottom - top) * (step / 4), 1),
+            "label": int(value),
+        })
+    return {"points": points, "line_points": line, "area_points": area, "grid": grid}
+
+
+def _parse_month(iso_value):
+    """Return a (year, month) tuple for an ISO date string, or None."""
+    try:
+        return int(iso_value[0:4]), int(iso_value[5:7])
+    except (TypeError, ValueError):
+        return None
+
 bp = Blueprint("dashboard", __name__)
 
 
@@ -68,8 +140,12 @@ def index():
         row = query(sql, list(params), one=True)
         return (row[0] if row and row[0] is not None else 0)
 
-    total = scalar(f"SELECT COUNT(*) FROM equipment e WHERE e.hospital_id = ? AND e.status != 'retired'{scope_sql}{ef_sql}",
-                   [hid] + scope_params + ef_params)
+    active_filter = " AND e.status != 'retired'"
+    total = scalar(
+        f"SELECT COUNT(*) FROM equipment e WHERE e.hospital_id = ?{active_filter}"
+        f"{scope_sql}{ef_sql}",
+        [hid] + scope_params + ef_params,
+    )
     by_status = {
         r["status"]: r["n"]
         for r in query(
@@ -79,6 +155,12 @@ def index():
             [hid] + scope_params + ef_params,
         )
     }
+    month_start = date.today().replace(day=1).isoformat()
+    new_this_month = scalar(
+        f"""SELECT COUNT(*) FROM equipment e
+             WHERE e.hospital_id = ? AND e.created_at >= ?{scope_sql}{ef_sql}""",
+        [hid, month_start] + scope_params + ef_params,
+    )
     today = today_iso()
     overdue = scalar(
         f"""SELECT COUNT(*) FROM maintenance_schedules s
@@ -128,10 +210,15 @@ def index():
 
     # monthly fault trend (last 6 months)
     months, fault_counts, repair_counts = [], [], []
-    for offset in range(5, -1, -1):
-        first = (date.today().replace(day=1) - timedelta(days=offset * 30)).replace(day=1)
+    first_of_month = date.today().replace(day=1)
+    starts = []
+    cursor = first_of_month
+    for _ in range(6):
+        starts.append(cursor)
+        cursor = (cursor - timedelta(days=1)).replace(day=1)
+    for first in reversed(starts):
         nxt = (first.replace(day=28) + timedelta(days=4)).replace(day=1)
-        months.append(first.strftime("%b %Y"))
+        months.append(first.strftime("%b"))
         fault_counts.append(
             scalar(
                 f"""SELECT COUNT(*) FROM fault_reports f
@@ -169,14 +256,27 @@ def index():
              ORDER BY f.reported_at DESC LIMIT 8""",
         [hid] + scope_params,
     )
-    due_soon = query(
+    due_rows = query(
         f"""SELECT s.*, e.name AS equipment_name, e.asset_number
               FROM maintenance_schedules s JOIN equipment e ON e.id = s.equipment_id
              WHERE s.hospital_id = ? AND s.is_active = 1 AND s.next_due_date <= ?
              {scope_sql}
-             ORDER BY s.next_due_date LIMIT 8""",
+             ORDER BY s.next_due_date LIMIT 6""",
         [hid, (date.today() + timedelta(days=30)).isoformat()] + scope_params,
     )
+    due_soon = []
+    for row in due_rows:
+        entry = dict(row)
+        try:
+            due_date = date.fromisoformat(row["next_due_date"])
+        except (TypeError, ValueError):
+            entry["overdue_days"] = None
+            entry["days_away"] = 999
+        else:
+            delta = (due_date - date.today()).days
+            entry["overdue_days"] = -delta if delta < 0 else None
+            entry["days_away"] = delta
+        due_soon.append(entry)
     low_stock = query(
         """SELECT * FROM spare_parts WHERE hospital_id = ? AND quantity <= min_stock
             ORDER BY quantity LIMIT 6""",
@@ -187,8 +287,14 @@ def index():
         refresh_maintenance_notifications(hid)
         refresh_low_stock_notifications(hid)
 
+    def pct(value):
+        return round(value / total * 100, 1) if total else 0.0
+
     return render_template(
         "dashboard.html",
+        today_pretty=date.today().strftime("%a, %d %b %Y"),
+        donut=_donut(by_status, total),
+        chart=_line_chart(fault_counts, months),
         metrics={
             "total": total,
             "operational": by_status.get("operational", 0),
@@ -201,10 +307,15 @@ def index():
             "open_faults": open_faults,
             "avg_turnaround_hours": round((avg_turnaround["m"] or 0) / 60, 1),
             "downtime_hours": round((downtime["m"] or 0) / 60, 1),
+            "new_this_month": new_this_month,
+            "pct_operational": pct(by_status.get("operational", 0)),
+            "pct_faulty": pct(by_status.get("faulty", 0)),
+            "pct_under_repair": pct(by_status.get("under_repair", 0)),
+            "pct_overdue": pct(overdue),
         },
         by_status=by_status,
         dept_dist=dept_dist,
-        chart={
+        chart_data={
             "months": months,
             "faults": fault_counts,
             "repairs": repair_counts,

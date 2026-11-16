@@ -308,6 +308,45 @@
     flushQueue();
   }
 
+  /* ---------------- equipment photo preview ---------------- */
+  var photoInput = document.querySelector("[data-photo-input]");
+  if (photoInput) {
+    photoInput.addEventListener("change", function () {
+      var target = document.getElementById("photo-preview");
+      var file = photoInput.files && photoInput.files[0];
+      if (!target || !file) { return; }
+      if (!/^image\/(jpeg|png|gif)$/.test(file.type)) {
+        target.innerHTML = '<p class="hint" style="color:#b3261e">Choose a JPEG, PNG or GIF image.</p>';
+        return;
+      }
+      var url = URL.createObjectURL(file);
+      target.innerHTML = '<img src="' + url + '" alt="Selected photo preview" ' +
+        'style="width:100%;border-radius:8px;border:1px solid #e3eaf1">';
+    });
+  }
+
+  /* ---------------- sidebar for small screens ---------------- */
+  document.querySelectorAll("[data-nav-toggle]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var sidebar = document.getElementById("sidebar");
+      var scrim = document.querySelector(".scrim");
+      if (!sidebar) { return; }
+      var open = sidebar.classList.toggle("open");
+      if (scrim) { scrim.hidden = !open; }
+      document.body.style.overflow = open ? "hidden" : "";
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  });
+  document.querySelectorAll("[data-nav-close]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var sidebar = document.getElementById("sidebar");
+      var scrim = document.querySelector(".scrim");
+      if (sidebar) { sidebar.classList.remove("open"); }
+      if (scrim) { scrim.hidden = true; }
+      document.body.style.overflow = "";
+    });
+  });
+
   /* ---------------- service worker ---------------- */
   if ("serviceWorker" in navigator && location.protocol === "https:") {
     window.addEventListener("load", function () {

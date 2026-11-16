@@ -1,12 +1,18 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% set v = view %}{# `view` is a dict-like helper prepared by the view: sqlite rows have no .get() #}
 
 {% block title %}{{ 'Register equipment' if mode == 'new' else 'Edit equipment' }}{% endblock %}
 {% block body %}
+<div class="breadcrumb">
+  <a href="{{ url_for('equipment.equipment_list') }}">Equipment</a>
+  <span>{{ icon('chevron', 13) }}</span>
+  <strong>{{ 'Register New Equipment' if mode == 'new' else 'Edit Equipment' }}</strong>
+</div>
 <div class="page-head">
   <div>
-    <h1>{{ 'Register equipment' if mode == 'new' else 'Edit equipment' }}</h1>
-    <p class="lead">Equipment identification numbers must be unique within your hospital.</p>
+    <h1>{{ 'Register New Equipment' if mode == 'new' else 'Edit Equipment' }}</h1>
+    <p class="lead">Identification numbers must be unique within your hospital.</p>
   </div>
   <div class="head-actions">
     <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_list') }}">Back to list</a>
@@ -15,6 +21,9 @@
 
 <form method="post" enctype="multipart/form-data" class="card">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="split">
+  <div>
+  <h2 style="font-size:.95rem;margin-bottom:14px">Equipment Details</h2>
   <div class="form-grid">
     <div class="field">
       <label for="name">Equipment name <span aria-hidden="true">*</span></label>
@@ -106,20 +115,42 @@
       <span class="hint">Set precise intervals in the maintenance module, with a manual or policy reference.</span>
     </div>
     <div class="field full">
-      <label for="photo">Equipment photograph</label>
-      <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif">
-      <span class="hint">JPEG, PNG or GIF up to 8 MB. Avoid photographing patients.</span>
-    </div>
-    <div class="field full">
       <label for="notes">Notes</label>
       <textarea id="notes" name="notes" placeholder="Condition on receipt, accessories, warranty terms…">{{ v('notes', '') or '' }}</textarea>
     </div>
   </div>
-  <div style="display:flex;gap:10px;margin-top:16px">
-    <button class="btn btn-primary" type="submit">{{ 'Register equipment' if mode == 'new' else 'Save changes' }}</button>
-    {% if mode == 'edit' %}
-    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_detail', eid=equipment_id) }}">Cancel</a>
-    {% endif %}
+  <div style="display:flex;gap:10px;margin-top:18px">
+    <button class="btn btn-primary" type="submit">{{ 'Save Equipment' if mode == 'new' else 'Save Changes' }}</button>
+    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_list') }}">Cancel</a>
+  </div>
+  </div>
+
+  <div>
+    <div class="photo-panel">
+      <h3 style="font-size:.9rem;margin-bottom:10px">Equipment Photo</h3>
+      {% if mode == 'edit' and v('image_path') %}
+      <img src="{{ url_for('equipment.media', filename=v('image_path')) }}" alt="Current equipment photograph">
+      {% else %}
+      <div class="photo-empty">
+        {{ icon('equipment', 34) }}
+        <span style="font-size:.78rem">No photo yet</span>
+      </div>
+      {% endif %}
+      <label class="btn btn-ghost btn-block" for="photo" style="cursor:pointer">
+        {{ icon('plus', 16) }} {{ 'Change Photo' if mode == 'edit' and v('image_path') else 'Add Photo' }}
+      </label>
+      <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif"
+             style="display:none" data-photo-input>
+      <span class="hint" style="display:block;margin-top:8px">JPEG, PNG or GIF up to 8 MB.
+        Avoid photographing patients.</span>
+      <div id="photo-preview" style="margin-top:10px"></div>
+    </div>
+
+    <div class="notice notice-info" style="margin-top:14px">
+      <span style="font-size:.8rem">A QR label is generated automatically once the equipment is
+      saved. Print it and attach it to the device.</span>
+    </div>
+  </div>
   </div>
 </form>
 {% endblock %}

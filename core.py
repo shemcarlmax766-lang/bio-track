@@ -234,6 +234,21 @@ def refresh_low_stock_notifications(hospital_id):
         )
 
 
+def open_fault_count():
+    """Badge count for the sidebar: unresolved faults in this hospital."""
+    user = current_user()
+    if not user:
+        return 0
+    sql = """SELECT COUNT(*) AS n FROM fault_reports
+              WHERE hospital_id = ? AND status NOT IN ('resolved', 'closed')"""
+    params = [user["hospital_id"]]
+    if user["role_code"] == "staff":
+        sql += " AND (department_id = ? OR reported_by = ?)"
+        params.extend([user["department_id"], user["id"]])
+    row = query(sql, params, one=True)
+    return row["n"] if row else 0
+
+
 def unread_notification_count():
     user = current_user()
     if not user:

@@ -45,7 +45,8 @@
 
       <div class="tab-panel" data-panel="faults">
         {% if faults %}
-        <table class="data">
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
           <thead><tr><th>Reported</th><th>Severity</th><th>Status</th><th>Problem</th></tr></thead>
           <tbody>
           {% for f in faults %}
@@ -58,13 +59,16 @@
           {% endfor %}
           </tbody>
         </table>
+        </div>
+
         {% else %}<p class="empty">No faults recorded for this equipment.</p>{% endif %}
       </div>
 
       <div class="tab-panel" data-panel="maintenance" hidden>
         {% if schedules %}
         <h3>Schedules</h3>
-        <table class="data">
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
           <thead><tr><th>Schedule</th><th>Interval</th><th>Next due</th><th>Reference</th></tr></thead>
           <tbody>
           {% for s in schedules %}
@@ -77,10 +81,13 @@
           {% endfor %}
           </tbody>
         </table>
+        </div>
+
         {% endif %}
         {% if maintenance %}
         <h3 style="margin-top:16px">Completed maintenance</h3>
-        <table class="data">
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
           <thead><tr><th>Performed</th><th>Engineer</th><th>Verified</th><th>Notes</th></tr></thead>
           <tbody>
           {% for m in maintenance %}
@@ -93,6 +100,8 @@
           {% endfor %}
           </tbody>
         </table>
+        </div>
+
         {% endif %}
         {% if not schedules and not maintenance %}
         <p class="empty">No preventive maintenance recorded. Intervals are never assumed;
@@ -102,7 +111,8 @@
 
       <div class="tab-panel" data-panel="repairs" hidden>
         {% if repairs %}
-        <table class="data">
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
           <thead><tr><th>Date</th><th>Engineer</th><th>Diagnosis</th><th>Downtime</th><th>Verified</th></tr></thead>
           <tbody>
           {% for r in repairs %}
@@ -116,12 +126,15 @@
           {% endfor %}
           </tbody>
         </table>
+        </div>
+
         {% else %}<p class="empty">No repair records yet.</p>{% endif %}
       </div>
 
       <div class="tab-panel" data-panel="docs" hidden>
         {% if documents %}
-        <table class="data">
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
           <thead><tr><th>Manual</th><th>Pages indexed</th><th>Uploaded</th><th></th></tr></thead>
           <tbody>
           {% for d in documents %}
@@ -142,6 +155,8 @@
           {% endfor %}
           </tbody>
         </table>
+        </div>
+
         {% else %}
         <p class="empty">No service manual linked.
           {% if user['role_code'] in ('engineer', 'administrator') %}
@@ -154,7 +169,8 @@
     <div class="card">
       <div class="card-head"><h2>Work orders</h2></div>
       {% if work_orders %}
-      <table class="data">
+      <div class="table-wrap" style="border:0;box-shadow:none">
+        <table class="data">
         <thead><tr><th>Opened</th><th>Priority</th><th>Status</th><th>Engineer</th><th>Downtime</th></tr></thead>
         <tbody>
         {% for w in work_orders %}
@@ -168,6 +184,8 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
+
       {% else %}<p class="empty">No work orders for this equipment.</p>{% endif %}
     </div>
   </div>

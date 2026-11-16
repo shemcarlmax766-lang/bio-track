@@ -43,6 +43,7 @@ def create_app():
     app.jinja_env.filters["short_dt"] = _short_dt
     app.jinja_env.globals.update(
         csrf_token=core.csrf_token,
+        open_faults=core.open_fault_count,
         current_user=core.current_user,
         unread_notifications=core.unread_notification_count,
         EQUIPMENT_STATUSES=dbmod.EQUIPMENT_STATUSES,

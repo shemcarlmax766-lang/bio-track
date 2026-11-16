@@ -20,7 +20,8 @@
       <form method="post" action="{{ url_for('maintenance.schedule_complete', sid=schedule['id']) }}">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         {% if checklist %}
-        <table class="data" style="margin-bottom:14px">
+        <div class="table-wrap" style="border:0;box-shadow:none;margin-bottom:14px">
+        <table class="data">
           <thead><tr><th>Checklist item</th><th>Result</th></tr></thead>
           <tbody>
           {% for item in checklist %}
@@ -38,6 +39,7 @@
           {% endfor %}
           </tbody>
         </table>
+        </div>
         {% else %}
         <p class="hint">This schedule has no checklist items.</p>
         {% endif %}
@@ -69,7 +71,8 @@
     <div class="card">
       <div class="card-head"><h2>Completion history</h2></div>
       {% if history %}
-      <table class="data">
+      <div class="table-wrap" style="border:0;box-shadow:none">
+        <table class="data">
         <thead><tr><th>Performed</th><th>Engineer</th><th>Results</th><th>Verified</th></tr></thead>
         <tbody>
         {% for h in history %}
@@ -83,6 +86,8 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
+
       {% else %}
       <p class="empty">No completions recorded yet.</p>
       {% endif %}

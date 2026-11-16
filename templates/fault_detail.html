@@ -1,45 +1,70 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Fault #{{ fault['id'] }}{% endblock %}
 {% block body %}
 {% set user = current_user() %}
 {% set can_manage = user['role_code'] in ('engineer', 'administrator') %}
+<div class="breadcrumb">
+  <a href="{{ url_for('faults.fault_list') }}">Fault Reports</a>
+  <span>{{ icon('chevron', 13) }}</span>
+  <strong>Fault Details</strong>
+</div>
 <div class="page-head">
   <div>
-    <h1>Fault #{{ fault['id'] }} · {{ fault['equipment_name'] }}</h1>
-    <p class="lead">
-      <span class="pill pill-{{ fault['severity'] }}">{{ fault['severity'] }}</span>
-      <span class="pill pill-{{ fault['status'] }}">{{ fault['status']|label }}</span>
-      · reported {{ fault['reported_at']|short_dt }}
-      by {{ fault['reporter'] or fault['reporter_name'] or 'unknown' }}
-    </p>
+    <h1>Fault Report #FR-{{ '%04d'|format(fault['id']) }}</h1>
+    <p class="lead">Reported {{ fault['reported_at']|short_dt }}
+      by {{ fault['reporter'] or fault['reporter_name'] or 'unknown' }}</p>
   </div>
   <div class="head-actions">
+    <span class="pill pill-{{ fault['status'] }}">{{ fault['status']|label }}</span>
+    <span class="pill pill-{{ fault['severity'] }}">{{ fault['severity']|capitalize }} severity</span>
     <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_detail', eid=fault['equipment_id']) }}">Equipment record</a>
-    <a class="btn btn-ghost" href="{{ url_for('faults.fault_list') }}">All faults</a>
   </div>
 </div>
 
 <div class="split">
   <div class="stack">
     <div class="card">
-      <div class="card-head"><h2>Reported problem</h2></div>
-      <p style="white-space:pre-wrap">{{ fault['description'] }}</p>
-      {% if fault['photo_path'] %}
-      <img class="equip-photo" src="{{ url_for('equipment.media', filename=fault['photo_path']) }}" alt="Fault photograph">
+      <div class="card-head"><h2>Equipment &amp; Report</h2></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div style="flex:0 0 168px">
+          {% if fault['photo_path'] %}
+          <img src="{{ url_for('equipment.media', filename=fault['photo_path']) }}"
+               alt="Fault photograph" style="width:100%;border-radius:10px;border:1px solid var(--line)">
+          {% else %}
+          <div class="photo-empty"><span style="font-size:.75rem">No photo</span></div>
+          {% endif %}
+        </div>
+        <div style="flex:1 1 240px;min-width:0">
+          <dl class="dl tight">
+            <dt>Equipment</dt><dd>{{ fault['equipment_name'] }}{% if fault['asset_number'] %} ({{ fault['asset_number'] }}){% endif %}</dd>
+            <dt>Department</dt><dd>{{ fault['department_name'] or '—' }}</dd>
+            <dt>Location</dt><dd>{{ fault['location'] or '—' }}</dd>
+            <dt>Assigned engineer</dt><dd>{{ fault['engineer_name'] or 'Not yet assigned' }}</dd>
+          </dl>
+        </div>
+      </div>
+      <h3 style="margin:16px 0 6px;font-size:.9rem">Fault Description</h3>
+      <p style="white-space:pre-wrap;margin:0;font-size:.88rem">{{ fault['description'] }}</p>
+      {% if fault['preliminary_findings'] or fault['diagnosis'] %}
+      <div class="grid grid-2" style="margin-top:16px;gap:12px">
+        <div>
+          <h3 style="font-size:.82rem;color:var(--muted);margin-bottom:4px">Preliminary findings</h3>
+          <p style="font-size:.85rem;margin:0">{{ fault['preliminary_findings'] or '—' }}</p>
+        </div>
+        <div>
+          <h3 style="font-size:.82rem;color:var(--muted);margin-bottom:4px">Diagnosis</h3>
+          <p style="font-size:.85rem;margin:0">{{ fault['diagnosis'] or '—' }}</p>
+        </div>
+      </div>
       {% endif %}
-      <dl class="dl" style="margin-top:12px">
-        <dt>Department</dt><dd>{{ fault['department_name'] or '—' }}</dd>
-        <dt>Location</dt><dd>{{ fault['location'] or '—' }}</dd>
-        <dt>Assigned engineer</dt><dd>{{ fault['engineer_name'] or 'Not yet assigned' }}</dd>
-        <dt>Preliminary findings</dt><dd>{{ fault['preliminary_findings'] or '—' }}</dd>
-        <dt>Diagnosis</dt><dd>{{ fault['diagnosis'] or '—' }}</dd>
-      </dl>
     </div>
 
     {% if work_orders %}
     <div class="card">
       <div class="card-head"><h2>Work orders</h2></div>
-      <table class="data">
+      <div class="table-wrap" style="border:0;box-shadow:none">
+        <table class="data">
         <thead><tr><th>Opened</th><th>Status</th><th>Priority</th><th>Engineer</th><th>Closed</th><th></th></tr></thead>
         <tbody>
         {% for w in work_orders %}
@@ -51,10 +76,11 @@
           <td>{{ w['closed_at']|short_dt if w['closed_at'] else '—' }}</td>
           <td class="actions">
             {% if can_manage and w['status'] != 'closed' %}
-            <form method="post" action="{{ url_for('faults.work_order_close', wid=w['id']) }}" class="inline">
+            <form method="post" action="{{ url_for('faults.work_order_close', wid=w['id']) }}"
+                  class="inline-stack">
               <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
               <input type="text" name="closing_note" placeholder="Closing note (required)"
-                     style="min-height:30px;font-size:.8rem;width:160px" required>
+                     class="input-sm" required>
               <button class="btn btn-ghost btn-sm" type="submit">Close</button>
             </form>
             {% endif %}
@@ -63,13 +89,16 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
+
     </div>
     {% endif %}
 
     <div class="card">
       <div class="card-head"><h2>Repair and service history</h2></div>
       {% if repairs %}
-      <table class="data">
+      <div class="table-wrap" style="border:0;box-shadow:none">
+        <table class="data">
         <thead><tr><th>Date</th><th>Engineer</th><th>Diagnosis / repair</th><th>Downtime</th><th>Return to service</th></tr></thead>
         <tbody>
         {% for r in repairs %}
@@ -94,6 +123,8 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
+
       {% else %}
       <p class="empty">No repairs recorded yet.</p>
       {% endif %}
