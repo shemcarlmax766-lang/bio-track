@@ -26,8 +26,5 @@ venv/
 .idea/
 .vscode/
 
-# Screenshot artefacts from the responsive test harness
-.shots/
-
-# Intermediate PNG conversions
-.shots-jpg/
+# Screenshot artefacts from the responsive test harness (all role dirs, PNG + JPG)
+.shots*/

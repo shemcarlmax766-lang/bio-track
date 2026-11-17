@@ -419,8 +419,10 @@ legend{font-size:.74rem;font-weight:700;color:var(--navy);padding:0 7px;text-tra
   /* five tiles get cramped below ~1240px: switch to a 3 + 2 layout */
   .grid-5{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
-@media (max-width:1360px){
-  /* two columns keep the donut and legend side by side; the schedule spans below */
+@media (max-width:1400px){
+  /* 1366-wide laptops are the commonest target; three columns there squeeze the
+     donut legend, so use two columns with the schedule spanning below.
+     The threshold must sit above 1366, not below it. */
   .grid-side-2{grid-template-columns:repeat(2,minmax(0,1fr))}
   .grid-side-2 > .card:nth-child(3){grid-column:1 / -1}
   .grid-side-2 > .card:nth-child(3) .sched{

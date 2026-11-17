@@ -84,13 +84,38 @@ const AUDIT = () => {
     } else if (b.top < a.bottom - 1) {
       issues.push("donut legend overlaps the chart when stacked");
     }
-    // legend labels must not be visually truncated
+    // legend labels must not be visually truncated, and must have room to read
     document.querySelectorAll(".donut-legend .lbl").forEach((el) => {
       if (el.scrollWidth > el.clientWidth + 1) {
         issues.push(`legend label truncated: "${(el.textContent || "").trim().slice(0, 24)}"`);
       }
+      if (el.getBoundingClientRect().width < 84) {
+        issues.push(`legend label column too narrow: ${Math.round(el.getBoundingClientRect().width)}px ` +
+                    `for "${(el.textContent || "").trim().slice(0, 20)}"`);
+      }
     });
   }
+  // sidebar identity tile: whichever variant is showing must fit on screen
+  const photoTile = document.querySelector(".side-photo");
+  const compactTile = document.querySelector(".side-identity");
+  [["photo", photoTile], ["compact", compactTile]].forEach(([name, el]) => {
+    if (!el) return;
+    const style = getComputedStyle(el);
+    if (style.display === "none" || el.getBoundingClientRect().height === 0) return;
+    const r = el.getBoundingClientRect();
+    if (r.bottom > vh + 1) {
+      issues.push(`sidebar ${name} identity tile extends below the fold: bottom=${Math.round(r.bottom)} vh=${vh}`);
+    }
+  });
+  // at least one identity variant should be visible on desktop widths
+  if (winW > 1080) {
+    const visible = [photoTile, compactTile].some((el) => {
+      if (!el) return false;
+      return getComputedStyle(el).display !== "none" && el.getBoundingClientRect().height > 0;
+    });
+    if (!visible) issues.push("no hospital identity tile visible in the sidebar");
+  }
+
   // sidebar: can every nav item be reached?
   const nav = document.querySelector(".side-nav");
   if (nav) {
