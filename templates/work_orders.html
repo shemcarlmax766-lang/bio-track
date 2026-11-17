@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Work orders{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <h1>Work orders</h1>
+    <p class="lead">Repair jobs linked to fault reports. Closing requires a note.</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('faults.fault_list') }}">Fault reports</a>
+  </div>
+</div>
+
+{% if work_orders %}
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr><th>Equipment</th><th>Priority</th><th>Status</th><th>Engineer</th>
+        <th>Opened</th><th>Closed</th><th>Downtime</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for w in work_orders %}
+    <tr>
+      <td><a href="{{ url_for('equipment.equipment_detail', eid=w['equipment_id']) }}">{{ w['equipment_name'] }}</a>
+        <br><small>{{ w['asset_number'] or '' }}</small></td>
+      <td><span class="pill pill-{{ w['priority'] }}">{{ w['priority'] }}</span></td>
+      <td><span class="pill pill-{{ w['status'] }}">{{ w['status']|label }}</span></td>
+      <td>{{ w['engineer_name'] or 'Unassigned' }}</td>
+      <td>{{ w['opened_at']|short_dt }}</td>
+      <td>{{ w['closed_at']|short_dt if w['closed_at'] else '—' }}</td>
+      <td class="num">{% if w['downtime_minutes'] %}{{ w['downtime_minutes'] }} min{% else %}—{% endif %}</td>
+      <td class="actions">
+        {% if w['status'] != 'closed' %}
+        <form class="inline" method="post" action="{{ url_for('faults.work_order_status', wid=w['id']) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <select name="status" style="width:auto;min-height:30px;font-size:.78rem;display:inline-block">
+            {% for s in ['open', 'in_progress', 'awaiting_parts', 'awaiting_verification'] %}
+            <option value="{{ s }}" {{ 'selected' if w['status'] == s }}>{{ s|label }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-ghost btn-sm" type="submit">Set</button>
+        </form>
+        <form class="inline" method="post" action="{{ url_for('faults.work_order_close', wid=w['id']) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <input type="text" name="closing_note" placeholder="Closing note" required
+                 style="width:130px;min-height:30px;font-size:.78rem;display:inline-block">
+          <button class="btn btn-navy btn-sm" type="submit">Close</button>
+        </form>
+        {% else %}
+        <small>Closed {{ w['closed_at']|short_dt }}</small>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="empty">No work orders yet. Assign a fault to an engineer to open one.</p></div>
+{% endif %}
+{% endblock %}

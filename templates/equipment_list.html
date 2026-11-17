@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Equipment{% endblock %}
+{% block body %}
+{% set user = current_user() %}
+<div class="page-head">
+  <div>
+    <h1>Medical equipment</h1>
+    <p class="lead">{{ equipment|length }} item(s) in view{% if user['role_code'] == 'staff' %}
+      · limited to {{ user['department_name'] or 'your department' }}{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    {% if user['role_code'] in ('engineer', 'administrator') %}
+    <a class="btn btn-primary" href="{{ url_for('equipment.equipment_new') }}">Register equipment</a>
+    <a class="btn btn-ghost" href="{{ url_for('equipment.document_list') }}">Service manuals</a>
+    {% endif %}
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <div class="field grow">
+    <label for="q">Search</label>
+    <input type="search" id="q" name="q" value="{{ filters.q }}" placeholder="Name, asset no., serial, model">
+  </div>
+  <div class="field">
+    <label for="department">Department</label>
+    <select id="department" name="department">
+      <option value="">All</option>
+      {% for d in departments %}
+      <option value="{{ d['id'] }}" {{ 'selected' if filters.department == d['id']|string }}>{{ d['name'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="category">Category</label>
+    <select id="category" name="category">
+      <option value="">All</option>
+      {% for c in categories %}
+      <option value="{{ c['id'] }}" {{ 'selected' if filters.category == c['id']|string }}>{{ c['name'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">All</option>
+      {% for s in EQUIPMENT_STATUSES %}
+      <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s|label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field" style="flex:0 0 auto">
+    <label>&nbsp;</label>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-navy" type="submit">Filter</button>
+      <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_list') }}">Reset</a>
+    </div>
+  </div>
+</form>
+
+{% if equipment %}
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Equipment</th><th>ID number</th><th>Department</th><th>Location</th>
+        <th>Status</th><th>Next maintenance</th><th>Engineer</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for e in equipment %}
+      <tr>
+        <td>
+          <a href="{{ url_for('equipment.equipment_detail', eid=e['id']) }}"><strong>{{ e['name'] }}</strong></a>
+          <br><small>{{ e['manufacturer'] or '—' }} {{ e['model_number'] or '' }}
+          {% if e['category_name'] %}· {{ e['category_name'] }}{% endif %}</small>
+        </td>
+        <td><code>{{ e['asset_number'] or '—' }}</code></td>
+        <td>{{ e['department_name'] or 'Unassigned' }}</td>
+        <td>{{ e['location'] or '—' }}</td>
+        <td>
+          <span class="pill pill-{{ e['status'] }}">{{ e['status']|label }}</span>
+          {% if e['clinical_use_blocked'] %}
+          <br><span class="pill pill-critical" title="{{ e['blocked_reason'] }}">Not for clinical use</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if e['next_maintenance_date'] %}
+          <span class="pill {{ 'pill-high' if e['next_maintenance_date'] < today else 'pill-muted' }}">{{ e['next_maintenance_date'] }}</span>
+          {% else %}<small>Not scheduled</small>{% endif %}
+        </td>
+        <td>{{ e['engineer_name'] or '—' }}</td>
+        <td class="actions">
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('equipment.equipment_label', eid=e['id']) }}">QR label</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><p class="empty">No equipment matches these filters.
+  {% if user['role_code'] in ('engineer', 'administrator') %}
+  <a href="{{ url_for('equipment.equipment_new') }}">Register the first item</a>.{% endif %}</p></div>
+{% endif %}
+{% endblock %}

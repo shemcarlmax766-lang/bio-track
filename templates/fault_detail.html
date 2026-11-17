@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Fault #{{ fault['id'] }}{% endblock %}
+{% block body %}
+{% set user = current_user() %}
+{% set can_manage = user['role_code'] in ('engineer', 'administrator') %}
+<div class="breadcrumb">
+  <a href="{{ url_for('faults.fault_list') }}">Fault Reports</a>
+  <span>{{ icon('chevron', 13) }}</span>
+  <strong>Fault Details</strong>
+</div>
+<div class="page-head">
+  <div>
+    <h1>Fault Report #FR-{{ '%04d'|format(fault['id']) }}</h1>
+    <p class="lead">Reported {{ fault['reported_at']|short_dt }}
+      by {{ fault['reporter'] or fault['reporter_name'] or 'unknown' }}</p>
+  </div>
+  <div class="head-actions">
+    <span class="pill pill-{{ fault['status'] }}">{{ fault['status']|label }}</span>
+    <span class="pill pill-{{ fault['severity'] }}">{{ fault['severity']|capitalize }} severity</span>
+    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_detail', eid=fault['equipment_id']) }}">Equipment record</a>
+  </div>
+</div>
+
+<div class="split">
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Equipment &amp; Report</h2></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div style="flex:0 0 168px">
+          {% if fault['photo_path'] %}
+          <img src="{{ url_for('equipment.media', filename=fault['photo_path']) }}"
+               alt="Fault photograph" style="width:100%;border-radius:10px;border:1px solid var(--line)">
+          {% else %}
+          <div class="photo-empty"><span style="font-size:.75rem">No photo</span></div>
+          {% endif %}
+        </div>
+        <div style="flex:1 1 240px;min-width:0">
+          <dl class="dl tight">
+            <dt>Equipment</dt><dd>{{ fault['equipment_name'] }}{% if fault['asset_number'] %} ({{ fault['asset_number'] }}){% endif %}</dd>
+            <dt>Department</dt><dd>{{ fault['department_name'] or '—' }}</dd>
+            <dt>Location</dt><dd>{{ fault['location'] or '—' }}</dd>
+            <dt>Assigned engineer</dt><dd>{{ fault['engineer_name'] or 'Not yet assigned' }}</dd>
+          </dl>
+        </div>
+      </div>
+      <h3 style="margin:16px 0 6px;font-size:.9rem">Fault Description</h3>
+      <p style="white-space:pre-wrap;margin:0;font-size:.88rem">{{ fault['description'] }}</p>
+      {% if fault['preliminary_findings'] or fault['diagnosis'] %}
+      <div class="grid grid-2" style="margin-top:16px;gap:12px">
+        <div>
+          <h3 style="font-size:.82rem;color:var(--muted);margin-bottom:4px">Preliminary findings</h3>
+          <p style="font-size:.85rem;margin:0">{{ fault['preliminary_findings'] or '—' }}</p>
+        </div>
+        <div>
+          <h3 style="font-size:.82rem;color:var(--muted);margin-bottom:4px">Diagnosis</h3>
+          <p style="font-size:.85rem;margin:0">{{ fault['diagnosis'] or '—' }}</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if work_orders %}
+    <div class="card">
+      <div class="card-head"><h2>Work orders</h2></div>
+      <div class="table-wrap" style="border:0;box-shadow:none">
+        <table class="data">
+        <thead><tr><th>Opened</th><th>Status</th><th>Priority</th><th>Engineer</th><th>Closed</th><th></th></tr></thead>
+        <tbody>
+        {% for w in work_orders %}
+        <tr>
+          <td>{{ w['opened_at']|short_dt }}</td>
+          <td><span class="pill pill-{{ w['status'] }}">{{ w['status']|label }}</span></td>
+          <td>{{ w['priority'] }}</td>
+          <td>{{ w['engineer_name'] or '—' }}</td>
+          <td>{{ w['closed_at']|short_dt if w['closed_at'] else '—' }}</td>
+          <td class="actions">
+            {% if can_manage and w['status'] != 'closed' %}
+            <form method="post" action="{{ url_for('faults.work_order_close', wid=w['id']) }}"
+                  class="inline-stack">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <input type="text" name="closing_note" placeholder="Closing note (required)"
+                     class="input-sm" required>
+              <button class="btn btn-ghost btn-sm" type="submit">Close</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-head"><h2>Repair and service history</h2></div>
+      {% if repairs %}
+      <div class="table-wrap" style="border:0;box-shadow:none">
+        <table class="data">
+        <thead><tr><th>Date</th><th>Engineer</th><th>Diagnosis / repair</th><th>Downtime</th><th>Return to service</th></tr></thead>
+        <tbody>
+        {% for r in repairs %}
+        <tr>
+          <td>{{ r['repair_date']|short_dt }}</td>
+          <td>{{ r['engineer_name'] or '—' }}</td>
+          <td>{{ r['diagnosis'] or '—' }}<br>
+            <small>{{ r['repair_performed'] or '' }}</small>
+            {% if r['components_replaced'] %}<br><small>Components: {{ r['components_replaced'] }}</small>{% endif %}
+            {% if r['spare_parts_used'] %}<br><small>Parts: {{ r['spare_parts_used'] }}</small>{% endif %}
+          </td>
+          <td class="num">{{ r['downtime_minutes'] or '—' }}</td>
+          <td>
+            {% if r['verified_at'] %}
+            <span class="pill pill-ok">Verified</span>
+            <br><small>by {{ r['verifier'] }} {{ r['verified_at']|short_dt }}</small>
+            {% else %}
+            <span class="pill pill-muted">Not verified</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      {% else %}
+      <p class="empty">No repairs recorded yet.</p>
+      {% endif %}
+    </div>
+
+    {% if can_manage %}
+    <div class="card" data-tabs>
+      <div class="tabs">
+        <button type="button" data-tab="diagnose" class="active">Findings</button>
+        <button type="button" data-tab="repair">Document repair</button>
+        <button type="button" data-tab="status">Status</button>
+      </div>
+
+      <div class="tab-panel" data-panel="diagnose">
+        <form method="post" action="{{ url_for('faults.fault_findings', fid=fault['id']) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="preliminary_findings">Preliminary findings</label>
+            <textarea id="preliminary_findings" name="preliminary_findings">{{ fault['preliminary_findings'] or '' }}</textarea>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <label for="diagnosis">Diagnosis</label>
+            <textarea id="diagnosis" name="diagnosis">{{ fault['diagnosis'] or '' }}</textarea>
+          </div>
+          <button class="btn btn-navy" type="submit" style="margin-top:10px">Save findings</button>
+        </form>
+      </div>
+
+      <div class="tab-panel" data-panel="repair" hidden>
+        <form method="post" action="{{ url_for('faults.repair_create', fid=fault['id']) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <div class="form-grid">
+            <div class="field full">
+              <label for="r_diagnosis">Diagnosis <span aria-hidden="true">*</span></label>
+              <input type="text" id="r_diagnosis" name="diagnosis" value="{{ fault['diagnosis'] or '' }}" required>
+            </div>
+            <div class="field full">
+              <label for="repair_performed">Repair performed <span aria-hidden="true">*</span></label>
+              <textarea id="repair_performed" name="repair_performed" required></textarea>
+            </div>
+            <div class="field">
+              <label for="components_replaced">Components replaced</label>
+              <input type="text" id="components_replaced" name="components_replaced">
+            </div>
+            <div class="field">
+              <label for="spare_parts_used">Spare parts used</label>
+              <input type="text" id="spare_parts_used" name="spare_parts_used"
+                     placeholder="Record stock issues in Spare parts">
+            </div>
+            <div class="field">
+              <label for="duration_minutes">Repair duration (minutes)</label>
+              <input type="number" id="duration_minutes" name="duration_minutes" min="0">
+            </div>
+            <div class="field full">
+              <label for="verification_notes">Verification and return-to-service documentation</label>
+              <textarea id="verification_notes" name="verification_notes"
+                        placeholder="Tests performed, measured values and the reference limits used."></textarea>
+              <span class="hint">Required before the equipment can be returned to service.</span>
+            </div>
+            <div class="field full">
+              <label class="checkline">
+                <input type="checkbox" name="return_to_service" value="1">
+                Equipment verified and returned to clinical service
+              </label>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit" style="margin-top:10px">Save repair record</button>
+        </form>
+      </div>
+
+      <div class="tab-panel" data-panel="status" hidden>
+        <form method="post" action="{{ url_for('faults.fault_status', fid=fault['id']) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="status">Set fault status</label>
+            <select id="status" name="status">
+              {% for s in FAULT_STATUSES %}
+              <option value="{{ s }}" {{ 'selected' if fault['status'] == s }}>{{ s|label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <label for="note">Note (required to close)</label>
+            <input type="text" id="note" name="note">
+          </div>
+          <button class="btn btn-navy" type="submit" style="margin-top:10px">Update status</button>
+        </form>
+
+        <form method="post" action="{{ url_for('faults.fault_assign', fid=fault['id']) }}" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="assigned_engineer_id">Assign biomedical engineer</label>
+            <select id="assigned_engineer_id" name="assigned_engineer_id" required>
+              <option value="">Select engineer…</option>
+              {% for e in engineers %}
+              <option value="{{ e['id'] }}" {{ 'selected' if fault['assigned_engineer_id'] == e['id'] }}>{{ e['full_name'] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="btn btn-navy" type="submit" style="margin-top:10px">Assign and open work order</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h3>Equipment timeline</h3></div>
+      {% if timeline %}
+      <ul class="timeline">
+        {% for t in timeline %}
+        <li><time>{{ t['at']|short_dt }}</time>{{ t['what'] }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="empty">No history yet.</p>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h3>Safety note</h3>
+      <p style="font-size:.83rem;color:var(--muted);margin:0">
+        Fault status changes affect the equipment's operational status, but do not by
+        themselves certify the equipment as safe. A qualified biomedical engineer must
+        verify and document return to clinical service.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

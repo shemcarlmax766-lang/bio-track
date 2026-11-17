@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="BioTrack">
+  <rect width="48" height="48" rx="11" fill="#0f8b8d"/>
+  <path d="M24 9v6M24 33v6M9 24h6M33 24h6" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+  <rect x="17" y="17" width="14" height="14" rx="4" fill="#fff"/>
+  <path d="M24 20.5v7M20.5 24h7" stroke="#0f2b46" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

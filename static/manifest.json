@@ -1,0 +1,13 @@
+{
+  "name": "BioTrack - Biomedical Engineering Management",
+  "short_name": "BioTrack",
+  "description": "Hospital medical equipment, maintenance and repair management.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fa",
+  "theme_color": "#0f2b46",
+  "icons": [
+    { "src": "/static/img/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

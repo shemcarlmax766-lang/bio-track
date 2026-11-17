@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>Reports</h1>
+    <p class="lead">Preview on screen, then download as PDF or Excel.</p></div>
+</div>
+<div class="grid grid-3">
+  {% for kind, meta in reports %}
+  <div class="card">
+    <h2>{{ meta.title }}</h2>
+    <p class="card-sub">{{ meta.description }}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn btn-navy btn-sm" href="{{ url_for('reports.report_preview', kind=kind) }}">Preview</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.report_pdf', kind=kind) }}">PDF</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.report_xlsx', kind=kind) }}">Excel</a>
+    </div>
+    {% if kind == 'activity' %}
+    <form method="get" action="{{ url_for('reports.report_preview', kind=kind) }}" style="margin-top:10px">
+      <div class="field"><label for="month-{{ kind }}">Month</label>
+        <input type="month" id="month-{{ kind }}" name="month" value="{{ month }}"></div>
+      <button class="btn btn-ghost btn-sm" type="submit" style="margin-top:8px">Set month</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+<div class="notice notice-info" style="margin-top:14px">
+  <span>Reports are generated from live hospital records. Exports contain engineering data only —
+  do not add patient-identifiable information to fault descriptions.</span>
+</div>
+{% endblock %}

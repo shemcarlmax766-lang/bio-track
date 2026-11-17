@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Report a fault{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div>
+    <h1>Report faulty equipment</h1>
+    <p class="lead">Describe the problem precisely. Biomedical engineering is notified immediately.</p>
+  </div>
+</div>
+
+<div class="split">
+  <form method="post" enctype="multipart/form-data" class="card" data-offline-fault>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    {% if not equipment %}
+    <div class="notice notice-warn">
+      <span>No equipment is available to report against. Your account may not have a
+      department assigned, or your department has no registered equipment.</span>
+    </div>
+    {% endif %}
+    <div class="form-grid">
+      <div class="field full">
+        <label for="equipment_id">Equipment <span aria-hidden="true">*</span></label>
+        <select id="equipment_id" name="equipment_id" required>
+          <option value="">Select equipment…</option>
+          {% for e in equipment %}
+          <option value="{{ e['id'] }}" {{ 'selected' if selected|string == e['id']|string }}>
+            {{ e['name'] }}{% if e['asset_number'] %} · {{ e['asset_number'] }}{% endif %}
+            {% if e['department_name'] %} · {{ e['department_name'] }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field full">
+        <label for="description">Description of the problem <span aria-hidden="true">*</span></label>
+        <textarea id="description" name="description" required minlength="10"
+          placeholder="What happens, when it started, any error messages, and whether the equipment is still in use.">{{ form_data.get('description', '') }}</textarea>
+        <span class="hint">Do not include patient names or other patient-identifiable information.</span>
+      </div>
+      <div class="field">
+        <label for="severity">Fault severity</label>
+        <select id="severity" name="severity">
+          {% for s in SEVERITIES %}
+          <option value="{{ s }}" {{ 'selected' if form_data.get('severity') == s or (not form_data.get('severity') and s == 'medium') }}>{{ s|capitalize }}</option>
+          {% endfor %}
+        </select>
+        <span class="hint">Critical = immediate patient risk; remove from use.</span>
+      </div>
+      <div class="field">
+        <label for="photo">Photograph (optional)</label>
+        <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif">
+        <span class="hint">JPEG, PNG or GIF up to 8 MB.</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-primary" type="submit">Submit fault report</button>
+      <a class="btn btn-ghost" href="{{ url_for('faults.fault_list') }}">Cancel</a>
+    </div>
+  </form>
+
+  <div class="stack">
+    <div class="card">
+      <h3>What happens next</h3>
+      <ol style="font-size:.86rem;color:var(--muted);padding-left:18px;margin:0">
+        <li>A biomedical engineer reviews the report.</li>
+        <li>The fault is assigned and a work order opened.</li>
+        <li>You receive in-app notifications as the status changes.</li>
+        <li>Equipment returns to service only after verification by a qualified engineer.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Intermittent connection</h3>
+      <p style="font-size:.85rem;color:var(--muted);margin:0">
+        If the connection drops while you are offline, a plain text fault report is saved on
+        this device and sent automatically when you reconnect. Photographs are not queued
+        offline. The server database remains the system of record.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

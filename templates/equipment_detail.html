@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}{{ item['name'] }}{% endblock %}
+{% block body %}
+{% set user = current_user() %}
+<div class="page-head">
+  <div>
+    <h1>{{ item['name'] }}</h1>
+    <p class="lead">
+      <span class="pill pill-{{ item['status'] }}">{{ item['status']|label }}</span>
+      {% if item['clinical_use_blocked'] %}
+      <span class="pill pill-critical">Not safe for clinical use</span>
+      {% endif %}
+      · {{ item['category_name'] or 'Uncategorised' }} · {{ item['department_name'] or 'Unassigned department' }}
+    </p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_label', eid=item['id']) }}">QR label</a>
+    {% if user['role_code'] != 'staff' %}
+    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_edit', eid=item['id']) }}">Edit</a>
+    {% endif %}
+    <a class="btn btn-primary" href="{{ url_for('faults.fault_new', equipment_id=item['id']) }}">Report fault</a>
+  </div>
+</div>
+
+{% if item['clinical_use_blocked'] %}
+<div class="notice notice-danger" style="margin-bottom:14px">
+  <div>
+    <strong>Flagged as not safe for clinical use</strong> by biomedical engineering.
+    <div>{{ item['blocked_reason'] }}</div>
+    <small>Flagged {{ item['blocked_at']|short_dt }}. A qualified engineer must verify the
+    equipment before it returns to clinical use.</small>
+  </div>
+</div>
+{% endif %}
+
+<div class="split">
+  <div class="stack">
+    <div class="card" data-tabs>
+      <div class="tabs" role="tablist">
+        <button type="button" data-tab="faults" class="active">Faults</button>
+        <button type="button" data-tab="maintenance">Maintenance</button>
+        <button type="button" data-tab="repairs">Repairs</button>
+        <button type="button" data-tab="docs">Manuals</button>
+      </div>
+
+      <div class="tab-panel" data-panel="faults">
+        {% if faults %}
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
+          <thead><tr><th>Reported</th><th>Severity</th><th>Status</th><th>Problem</th></tr></thead>
+          <tbody>
+          {% for f in faults %}
+          <tr>
+            <td>{{ f['reported_at']|short_dt }}</td>
+            <td><span class="pill pill-{{ f['severity'] }}">{{ f['severity'] }}</span></td>
+            <td><span class="pill pill-{{ f['status'] }}">{{ f['status']|label }}</span></td>
+            <td><a href="{{ url_for('faults.fault_detail', fid=f['id']) }}">{{ f['description'][:90] }}{% if f['description']|length > 90 %}…{% endif %}</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+
+        {% else %}<p class="empty">No faults recorded for this equipment.</p>{% endif %}
+      </div>
+
+      <div class="tab-panel" data-panel="maintenance" hidden>
+        {% if schedules %}
+        <h3>Schedules</h3>
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
+          <thead><tr><th>Schedule</th><th>Interval</th><th>Next due</th><th>Reference</th></tr></thead>
+          <tbody>
+          {% for s in schedules %}
+          <tr>
+            <td><a href="{{ url_for('maintenance.schedule_detail', sid=s['id']) }}">{{ s['name'] }}</a></td>
+            <td>Every {{ s['frequency_days'] }} days</td>
+            <td>{{ s['next_due_date'] }}</td>
+            <td><small>{{ s['reference'] }}</small></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+
+        {% endif %}
+        {% if maintenance %}
+        <h3 style="margin-top:16px">Completed maintenance</h3>
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
+          <thead><tr><th>Performed</th><th>Engineer</th><th>Verified</th><th>Notes</th></tr></thead>
+          <tbody>
+          {% for m in maintenance %}
+          <tr>
+            <td>{{ m['performed_at']|short_dt }}</td>
+            <td>{{ m['engineer_name'] or '—' }}</td>
+            <td>{{ 'Yes' if m['verified_at'] else 'No' }}</td>
+            <td>{{ (m['notes'] or '')[:70] }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+
+        {% endif %}
+        {% if not schedules and not maintenance %}
+        <p class="empty">No preventive maintenance recorded. Intervals are never assumed;
+          create a schedule with a manufacturer or policy reference.</p>
+        {% endif %}
+      </div>
+
+      <div class="tab-panel" data-panel="repairs" hidden>
+        {% if repairs %}
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
+          <thead><tr><th>Date</th><th>Engineer</th><th>Diagnosis</th><th>Downtime</th><th>Verified</th></tr></thead>
+          <tbody>
+          {% for r in repairs %}
+          <tr>
+            <td>{{ r['repair_date']|short_dt }}</td>
+            <td>{{ r['engineer_name'] or '—' }}</td>
+            <td>{{ (r['diagnosis'] or '')[:80] }}<br><small>{{ (r['repair_performed'] or '')[:90] }}</small></td>
+            <td class="num">{{ r['downtime_minutes'] or '—' }}{% if r['downtime_minutes'] %} min{% endif %}</td>
+            <td>{{ 'Yes' if r['verified_at'] else 'Not verified' }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+
+        {% else %}<p class="empty">No repair records yet.</p>{% endif %}
+      </div>
+
+      <div class="tab-panel" data-panel="docs" hidden>
+        {% if documents %}
+        <div class="table-wrap" style="border:0;box-shadow:none">
+          <table class="data">
+          <thead><tr><th>Manual</th><th>Pages indexed</th><th>Uploaded</th><th></th></tr></thead>
+          <tbody>
+          {% for d in documents %}
+          <tr>
+            <td>{{ d['title'] }}<br><small>{{ d['filename'] }}</small></td>
+            <td class="num">{{ d['page_count'] }}</td>
+            <td>{{ d['uploaded_at']|short_dt }}</td>
+            <td class="actions">
+              {% if user['role_code'] in ('engineer', 'administrator') %}
+              <form class="inline" method="post" action="{{ url_for('equipment.document_delete', doc_id=d['id']) }}"
+                    data-confirm="Delete this manual and its extracted text?">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button class="btn btn-ghost btn-sm" type="submit">Delete</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+
+        {% else %}
+        <p class="empty">No service manual linked.
+          {% if user['role_code'] in ('engineer', 'administrator') %}
+          <a href="{{ url_for('equipment.document_list') }}">Upload a PDF manual</a>.
+          {% endif %}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Work orders</h2></div>
+      {% if work_orders %}
+      <div class="table-wrap" style="border:0;box-shadow:none">
+        <table class="data">
+        <thead><tr><th>Opened</th><th>Priority</th><th>Status</th><th>Engineer</th><th>Downtime</th></tr></thead>
+        <tbody>
+        {% for w in work_orders %}
+        <tr>
+          <td>{{ w['opened_at']|short_dt }}</td>
+          <td><span class="pill pill-{{ w['priority'] }}">{{ w['priority'] }}</span></td>
+          <td><span class="pill pill-{{ w['status'] }}">{{ w['status']|label }}</span></td>
+          <td>{{ w['engineer_name'] or '—' }}</td>
+          <td class="num">{{ w['downtime_minutes'] or '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      {% else %}<p class="empty">No work orders for this equipment.</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      {% if item['image_path'] %}
+      <img class="equip-photo" src="{{ url_for('equipment.media', filename=item['image_path']) }}"
+           alt="{{ item['name'] }}">
+      {% endif %}
+      <h2 style="margin-top:14px">Equipment record</h2>
+      <dl class="dl">
+        <dt>Asset number</dt><dd><code>{{ item['asset_number'] or '—' }}</code></dd>
+        <dt>Category</dt><dd>{{ item['category_name'] or '—' }}</dd>
+        <dt>Department</dt><dd>{{ item['department_name'] or '—' }}</dd>
+        <dt>Location</dt><dd>{{ item['location'] or '—' }}</dd>
+        <dt>Manufacturer</dt><dd>{{ item['manufacturer'] or '—' }}</dd>
+        <dt>Model</dt><dd>{{ item['model_number'] or '—' }}</dd>
+        <dt>Serial number</dt><dd>{{ item['serial_number'] or '—' }}</dd>
+        <dt>Installed</dt><dd>{{ item['installation_date'] or '—' }}</dd>
+        <dt>Purchased</dt><dd>{{ item['purchase_date'] or '—' }}</dd>
+        <dt>Warranty expiry</dt><dd>{{ item['warranty_expiry'] or '—' }}</dd>
+        <dt>Purchase cost</dt><dd>{{ item['purchase_cost_ugx']|ugx }}</dd>
+        <dt>Assigned engineer</dt><dd>{{ item['engineer_name'] or '—' }}</dd>
+        <dt>Last maintenance</dt><dd>{{ item['last_maintenance_date'] or '—' }}</dd>
+        <dt>Next maintenance</dt><dd>{{ item['next_maintenance_date'] or 'Not scheduled' }}</dd>
+      </dl>
+      {% if item['notes'] %}<p style="margin-top:12px"><small>{{ item['notes'] }}</small></p>{% endif %}
+    </div>
+
+    {% if user['role_code'] in ('engineer', 'administrator') %}
+    <div class="card">
+      <div class="card-head"><h3>Clinical-use safety</h3></div>
+      {% if item['clinical_use_blocked'] %}
+      <p class="card-sub">Restricted. Only clear this after documented verification.</p>
+      <form method="post" action="{{ url_for('equipment.clinical_use', eid=item['id']) }}"
+            data-confirm="Confirm the equipment has been verified as safe for clinical use?">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="clear">
+        <button class="btn btn-navy btn-block" type="submit">Clear restriction after verification</button>
+      </form>
+      {% else %}
+      <p class="card-sub">Document that this equipment is not safe for clinical use. Staff
+        and administrators are notified immediately.</p>
+      <form method="post" action="{{ url_for('equipment.clinical_use', eid=item['id']) }}"
+            data-confirm="Flag this equipment as not safe for clinical use?">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="block">
+        <div class="field">
+          <label for="reason">Reason</label>
+          <textarea id="reason" name="reason" required
+                    placeholder="e.g. Earth leakage above limit; do not connect to patient."></textarea>
+        </div>
+        <button class="btn btn-danger btn-block" type="submit" style="margin-top:10px">Flag as unsafe for clinical use</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

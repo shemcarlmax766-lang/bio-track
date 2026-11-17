@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Register hospital{% endblock %}
+{% block body %}
+<div class="auth-card wide">
+  <div class="auth-head">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="44" height="44">
+    <h1>Register your hospital</h1>
+    <p>Creates a separate, isolated hospital workspace with you as administrator.</p>
+  </div>
+  <form method="post" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="field full">
+        <label for="hospital_name">Hospital name</label>
+        <input type="text" id="hospital_name" name="hospital_name" required
+               value="{{ form_data.get('hospital_name', '') }}" placeholder="e.g. Kampala Regional Referral Hospital">
+      </div>
+      <div class="field full">
+        <label for="district">District</label>
+        <input type="text" id="district" name="district" value="{{ form_data.get('district', '') }}"
+               placeholder="e.g. Kampala">
+        <span class="hint">Used for reporting only. Uganda Shillings and Africa/Kampala are the defaults.</span>
+      </div>
+      <div class="field full">
+        <label for="full_name">Your full name</label>
+        <input type="text" id="full_name" name="full_name" required value="{{ form_data.get('full_name', '') }}">
+      </div>
+      <div class="field full">
+        <label for="email">Your email address</label>
+        <input type="email" id="email" name="email" autocomplete="username" required
+               value="{{ form_data.get('email', '') }}">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="new-password" required minlength="10">
+        <span class="hint">At least 10 characters.</span>
+      </div>
+      <div class="field">
+        <label for="password_confirm">Confirm password</label>
+        <input type="password" id="password_confirm" name="password_confirm" autocomplete="new-password" required>
+      </div>
+    </div>
+    <div class="notice notice-info" style="margin-top:14px">
+      <span>Registration sets up the standard Ugandan hospital departments and equipment
+      categories. An administrator can rename or add more afterwards.</span>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn-primary btn-block" type="submit">Create hospital workspace</button>
+    </div>
+  </form>
+  <div class="auth-foot">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a></div>
+</div>
+{% endblock %}

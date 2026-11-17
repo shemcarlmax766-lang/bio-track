@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% set v = view %}{# `view` is a dict-like helper prepared by the view: sqlite rows have no .get() #}
+
+{% block title %}{{ 'Register equipment' if mode == 'new' else 'Edit equipment' }}{% endblock %}
+{% block body %}
+<div class="breadcrumb">
+  <a href="{{ url_for('equipment.equipment_list') }}">Equipment</a>
+  <span>{{ icon('chevron', 13) }}</span>
+  <strong>{{ 'Register New Equipment' if mode == 'new' else 'Edit Equipment' }}</strong>
+</div>
+<div class="page-head">
+  <div>
+    <h1>{{ 'Register New Equipment' if mode == 'new' else 'Edit Equipment' }}</h1>
+    <p class="lead">Identification numbers must be unique within your hospital.</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_list') }}">Back to list</a>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="card">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="split">
+  <div>
+  <h2 style="font-size:.95rem;margin-bottom:14px">Equipment Details</h2>
+  <div class="form-grid">
+    <div class="field">
+      <label for="name">Equipment name <span aria-hidden="true">*</span></label>
+      <input type="text" id="name" name="name" required value="{{ v('name', '') }}"
+             placeholder="e.g. Patient Monitor">
+    </div>
+    <div class="field">
+      <label for="category_id">Category</label>
+      <select id="category_id" name="category_id">
+        <option value="">Uncategorised</option>
+        {% for c in categories %}
+        <option value="{{ c['id'] }}" {{ 'selected' if v('category_id')|string == c['id']|string }}>{{ c['name'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="manufacturer">Manufacturer</label>
+      <input type="text" id="manufacturer" name="manufacturer" value="{{ v('manufacturer', '') }}">
+    </div>
+    <div class="field">
+      <label for="model_number">Model number</label>
+      <input type="text" id="model_number" name="model_number" value="{{ v('model_number', '') }}">
+    </div>
+    <div class="field">
+      <label for="serial_number">Serial number</label>
+      <input type="text" id="serial_number" name="serial_number" value="{{ v('serial_number', '') }}">
+    </div>
+    <div class="field">
+      <label for="asset_number">Equipment identification number</label>
+      <input type="text" id="asset_number" name="asset_number" value="{{ v('asset_number', '') }}"
+             placeholder="e.g. ICU-PM-007">
+      <span class="hint">Your internal asset tag. Printed on the QR label.</span>
+    </div>
+    <div class="field">
+      <label for="department_id">Hospital department</label>
+      <select id="department_id" name="department_id">
+        <option value="">Unassigned</option>
+        {% for d in departments %}
+        <option value="{{ d['id'] }}" {{ 'selected' if v('department_id')|string == d['id']|string }}>{{ d['name'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="location">Physical location</label>
+      <input type="text" id="location" name="location" value="{{ v('location', '') }}"
+             placeholder="e.g. ICU Bay 3">
+    </div>
+    <div class="field">
+      <label for="status">Current operational status</label>
+      <select id="status" name="status">
+        {% for s in EQUIPMENT_STATUSES %}
+        <option value="{{ s }}" {{ 'selected' if v('status', 'operational') == s }}>{{ s|label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="assigned_engineer_id">Assigned biomedical engineer</label>
+      <select id="assigned_engineer_id" name="assigned_engineer_id">
+        <option value="">Unassigned</option>
+        {% for e in engineers %}
+        <option value="{{ e['id'] }}" {{ 'selected' if v('assigned_engineer_id')|string == e['id']|string }}>{{ e['full_name'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="installation_date">Installation date</label>
+      <input type="date" id="installation_date" name="installation_date" value="{{ v('installation_date', '') or '' }}">
+    </div>
+    <div class="field">
+      <label for="purchase_date">Purchase date</label>
+      <input type="date" id="purchase_date" name="purchase_date" value="{{ v('purchase_date', '') or '' }}">
+    </div>
+    <div class="field">
+      <label for="warranty_expiry">Warranty expiry</label>
+      <input type="date" id="warranty_expiry" name="warranty_expiry" value="{{ v('warranty_expiry', '') or '' }}">
+    </div>
+    <div class="field">
+      <label for="purchase_cost_ugx">Purchase cost (UGX)</label>
+      <input type="number" id="purchase_cost_ugx" name="purchase_cost_ugx" min="0" step="1000"
+             value="{{ v('purchase_cost_ugx', '') or '' }}">
+    </div>
+    <div class="field">
+      <label for="last_maintenance_date">Last maintenance date</label>
+      <input type="date" id="last_maintenance_date" name="last_maintenance_date" value="{{ v('last_maintenance_date', '') or '' }}">
+    </div>
+    <div class="field">
+      <label for="next_maintenance_date">Next maintenance date</label>
+      <input type="date" id="next_maintenance_date" name="next_maintenance_date" value="{{ v('next_maintenance_date', '') or '' }}">
+      <span class="hint">Set precise intervals in the maintenance module, with a manual or policy reference.</span>
+    </div>
+    <div class="field full">
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" placeholder="Condition on receipt, accessories, warranty terms…">{{ v('notes', '') or '' }}</textarea>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:18px">
+    <button class="btn btn-primary" type="submit">{{ 'Save Equipment' if mode == 'new' else 'Save Changes' }}</button>
+    <a class="btn btn-ghost" href="{{ url_for('equipment.equipment_list') }}">Cancel</a>
+  </div>
+  </div>
+
+  <div>
+    <div class="photo-panel">
+      <h3 style="font-size:.9rem;margin-bottom:10px">Equipment Photo</h3>
+      {% if mode == 'edit' and v('image_path') %}
+      <img src="{{ url_for('equipment.media', filename=v('image_path')) }}" alt="Current equipment photograph">
+      {% else %}
+      <div class="photo-empty">
+        {{ icon('equipment', 34) }}
+        <span style="font-size:.78rem">No photo yet</span>
+      </div>
+      {% endif %}
+      <label class="btn btn-ghost btn-block" for="photo" style="cursor:pointer">
+        {{ icon('plus', 16) }} {{ 'Change Photo' if mode == 'edit' and v('image_path') else 'Add Photo' }}
+      </label>
+      <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif"
+             style="display:none" data-photo-input>
+      <span class="hint" style="display:block;margin-top:8px">JPEG, PNG or GIF up to 8 MB.
+        Avoid photographing patients.</span>
+      <div id="photo-preview" style="margin-top:10px"></div>
+    </div>
+
+    <div class="notice notice-info" style="margin-top:14px">
+      <span style="font-size:.8rem">A QR label is generated automatically once the equipment is
+      saved. Print it and attach it to the device.</span>
+    </div>
+  </div>
+  </div>
+</form>
+{% endblock %}

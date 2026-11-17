@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Dashboard{% endblock %}
+{% block body %}
+{% set user = current_user() %}
+{% set names = user['full_name'].split() %}
+{% set short_name = names[1] ~ ' ' ~ names[-1][0] ~ '.' if names|length > 1 else names[0] %}
+
+<div class="page-head">
+  <div>
+    <h1>Welcome back, {{ short_name }}!</h1>
+    <p class="lead">Here's what's happening with your hospital equipment today.</p>
+  </div>
+  <div class="page-meta">
+    <span>{{ icon('calendar', 16) }} {{ today_pretty }}</span>
+    <span><span class="dot"></span>Africa/Kampala</span>
+  </div>
+</div>
+
+<div class="grid grid-5" style="margin-bottom:16px">
+  <div class="metric metric-blue">
+    <div class="metric-ico">{{ icon('equipment', 24) }}</div>
+    <div class="metric-body">
+      <span class="metric-label">Total Equipment</span>
+      <span class="metric-value">{{ metrics.total }}</span>
+      <span class="metric-foot"><span class="arrow">↑</span> {{ metrics.new_this_month }} added this month</span>
+    </div>
+  </div>
+  <div class="metric metric-green">
+    <div class="metric-ico">{{ icon('check', 24) }}</div>
+    <div class="metric-body">
+      <span class="metric-label">Operational</span>
+      <span class="metric-value">{{ metrics.operational }}</span>
+      <span class="metric-foot">{{ metrics.pct_operational }}%</span>
+    </div>
+  </div>
+  <div class="metric metric-red">
+    <div class="metric-ico">{{ icon('fault', 24) }}</div>
+    <div class="metric-body">
+      <span class="metric-label">Faulty</span>
+      <span class="metric-value">{{ metrics.faulty }}</span>
+      <span class="metric-foot">{{ metrics.pct_faulty }}%</span>
+    </div>
+  </div>
+  <div class="metric metric-amber">
+    <div class="metric-ico">{{ icon('maintenance', 24) }}</div>
+    <div class="metric-body">
+      <span class="metric-label">Under Repair</span>
+      <span class="metric-value">{{ metrics.under_repair }}</span>
+      <span class="metric-foot">{{ metrics.pct_under_repair }}%</span>
+    </div>
+  </div>
+  <div class="metric metric-purple">
+    <div class="metric-ico">{{ icon('calendar', 24) }}</div>
+    <div class="metric-body">
+      <span class="metric-label">Overdue Maintenance</span>
+      <span class="metric-value">{{ metrics.overdue }}</span>
+      <span class="metric-foot">{{ metrics.pct_overdue }}%</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-side-2" style="margin-bottom:16px">
+  {# --- status donut --- #}
+  <div class="card">
+    <div class="card-head"><h2>Equipment Status Overview</h2></div>
+    <div class="donut-wrap">
+      <div class="donut">
+        <svg viewBox="0 0 120 120" width="172" height="172" role="img"
+             aria-label="Equipment status distribution">
+          <circle cx="60" cy="60" r="48" fill="none" stroke="#eef3f8" stroke-width="19"/>
+          {% for seg in donut %}
+          <circle cx="60" cy="60" r="48" fill="none" stroke="{{ seg.colour }}" stroke-width="19"
+                  stroke-dasharray="{{ seg.dash }} {{ seg.gap }}"
+                  stroke-dashoffset="{{ seg.offset }}"/>
+          {% endfor %}
+        </svg>
+        <div class="donut-center">
+          <b>{{ metrics.total }}</b>
+          <span>Total</span>
+        </div>
+      </div>
+      <div class="donut-legend">
+        {% for seg in donut %}
+        <div class="row">
+          <i style="background:{{ seg.colour }}"></i>
+          <span class="lbl" title="{{ seg.label }} {{ seg.pct }}%">{{ seg.label }}
+            <small>{{ seg.pct }}%</small></span>
+          <span class="n">{{ seg.value }}</span>
+        </div>
+        {% endfor %}
+        {% if not donut %}
+        <p class="empty" style="padding:0">No equipment registered yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# --- monthly fault line chart --- #}
+  <div class="card">
+    <div class="card-head"><h2>Monthly Fault Reports</h2></div>
+    <svg class="line-chart" viewBox="0 0 340 200" preserveAspectRatio="none" role="img"
+         aria-label="Fault reports per month">
+      {% for g in chart.grid %}
+      <line class="gl" x1="38" y1="{{ g.y }}" x2="334" y2="{{ g.y }}"/>
+      <text class="axl" x="30" y="{{ g.y + 4 }}" text-anchor="end">{{ g.label }}</text>
+      {% endfor %}
+      <polygon class="area" points="{{ chart.area_points }}"/>
+      <polyline class="line" points="{{ chart.line_points }}"/>
+      {% for p in chart.points %}
+      <circle class="marker" cx="{{ p.x }}" cy="{{ p.y }}" r="3.4"/>
+      <text class="axl" x="{{ p.x }}" y="196" text-anchor="middle">{{ p.label }}</text>
+      {% endfor %}
+    </svg>
+  </div>
+
+  {# --- maintenance schedule --- #}
+  <div class="card">
+    <div class="card-head">
+      <h2>Maintenance Schedule</h2>
+      {% if user['role_code'] in ('engineer', 'administrator') %}
+      <a class="card-link" href="{{ url_for('maintenance.maintenance_list') }}">View All {{ icon('arrow', 14) }}</a>
+      {% endif %}
+    </div>
+    {% if due_soon %}
+    <ul class="sched">
+      {% for s in due_soon %}
+      <li>
+        {% if s['overdue_days'] is not none %}
+        <span class="s-ico over">{{ icon('fault', 18) }}</span>
+        <span class="s-body">
+          <strong>{{ s['equipment_name'] }} – {{ s['name'] }}</strong>
+          <small>Overdue by {{ s['overdue_days'] }} day{{ '' if s['overdue_days'] == 1 else 's' }}</small>
+        </span>
+        <span class="pill pill-overdue">Overdue</span>
+        {% elif s['days_away'] <= 3 %}
+        <span class="s-ico soon">{{ icon('calendar', 18) }}</span>
+        <span class="s-body">
+          <strong>{{ s['equipment_name'] }} – {{ s['name'] }}</strong>
+          <small>Due in {{ s['days_away'] }} day{{ '' if s['days_away'] == 1 else 's' }}</small>
+        </span>
+        <span class="pill pill-upcoming">Upcoming</span>
+        {% else %}
+        <span class="s-ico ok">{{ icon('check', 18) }}</span>
+        <span class="s-body">
+          <strong>{{ s['equipment_name'] }} – {{ s['name'] }}</strong>
+          <small>Due in {{ s['days_away'] }} days</small>
+        </span>
+        <span class="pill pill-scheduled">Scheduled</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Nothing due in the next 30 days.</p>
+    {% endif %}
+  </div>
+</div>
+
+{# --- quick actions + BioAssist --- #}
+<div class="card-head" style="margin:0 0 10px"><h2>Quick Actions</h2></div>
+<div class="grid" style="grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);margin-bottom:16px">
+  <div class="quick">
+    {% if user['role_code'] in ('engineer', 'administrator') %}
+    <a class="quick-tile qa-blue" href="{{ url_for('equipment.equipment_new') }}">
+      {{ icon('plus', 26) }}<span>Register<br>Equipment</span></a>
+    <a class="quick-tile qa-green" href="{{ url_for('faults.fault_new') }}">
+      {{ icon('fault', 26) }}<span>Report<br>Fault</span></a>
+    <a class="quick-tile qa-purple" href="{{ url_for('maintenance.maintenance_list') }}">
+      {{ icon('calendar', 26) }}<span>Schedule<br>Maintenance</span></a>
+    {% else %}
+    <a class="quick-tile qa-green" href="{{ url_for('faults.fault_new') }}">
+      {{ icon('fault', 26) }}<span>Report<br>Fault</span></a>
+    <a class="quick-tile qa-blue" href="{{ url_for('equipment.equipment_list') }}">
+      {{ icon('equipment', 26) }}<span>My Department<br>Equipment</span></a>
+    <a class="quick-tile qa-purple" href="{{ url_for('faults.fault_list') }}">
+      {{ icon('clock', 26) }}<span>Track<br>My Faults</span></a>
+    {% endif %}
+    <a class="quick-tile qa-amber" href="{{ url_for('reports.reports_index') }}">
+      {{ icon('chart', 26) }}<span>View<br>Reports</span></a>
+  </div>
+
+  <div class="bio-banner">
+    <div class="bio-ico">{{ icon('spark', 24) }}</div>
+    <div style="min-width:0">
+      <h3>BioAssist – Your AI Biomedical Assistant</h3>
+      <p>Get instant help with equipment troubleshooting, maintenance procedures and more.</p>
+    </div>
+    {% if user['role_code'] in ('engineer', 'administrator') %}
+    <a class="btn btn-navy" href="{{ url_for('bioassist.bioassist') }}">Ask BioAssist</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid grid-side">
+  <div class="card flush">
+    <div class="card-head">
+      <h2>Recent Fault Reports</h2>
+      <a class="card-link" href="{{ url_for('faults.fault_list') }}">View all {{ icon('arrow', 14) }}</a>
+    </div>
+    {% if recent_faults %}
+    <div class="table-wrap flat">
+      <table class="data">
+        <thead><tr><th>Equipment</th><th>Department</th><th>Severity</th><th>Status</th><th>Reported</th></tr></thead>
+        <tbody>
+        {% for f in recent_faults %}
+        <tr>
+          <td><a href="{{ url_for('faults.fault_detail', fid=f['id']) }}"><strong>{{ f['equipment_name'] }}</strong></a><br>
+            <small>{{ (f['description'] or '')[:52] }}{% if (f['description'] or '')|length > 52 %}…{% endif %}</small></td>
+          <td>{{ f['department_name'] or '—' }}</td>
+          <td><span class="pill pill-{{ f['severity'] }}">{{ f['severity']|capitalize }}</span></td>
+          <td><span class="pill pill-{{ f['status'] }}">{{ f['status']|label }}</span></td>
+          <td><small>{{ f['reported_at']|short_dt }}</small></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">No fault reports yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Department Equipment</h2></div>
+      {% if dept_dist %}
+      {% set maxn = dept_dist|map(attribute='n')|max %}
+      <div class="bars">
+        {% for d in dept_dist[:6] %}
+        <div class="row">
+          <span title="{{ d['name'] }}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d['name'] }}</span>
+          <span class="track"><span class="fill" style="width:{{ (d['n'] / maxn * 100)|round(1) }}%"></span></span>
+          <span class="n">{{ d['n'] }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="empty">No equipment yet.</p>
+      {% endif %}
+    </div>
+
+    {% if user['role_code'] in ('engineer', 'administrator') and low_stock %}
+    <div class="card">
+      <div class="card-head">
+        <h2>Low Spare-Part Stock</h2>
+        <a class="card-link" href="{{ url_for('admin.parts') }}">Spare parts {{ icon('arrow', 14) }}</a>
+      </div>
+      <ul class="sched">
+        {% for p in low_stock %}
+        <li>
+          <span class="s-ico {{ 'over' if p['quantity'] == 0 else 'soon' }}">{{ icon('parts', 18) }}</span>
+          <span class="s-body">
+            <strong>{{ p['name'] }}</strong>
+            <small>{{ p['part_number'] }}</small>
+          </span>
+          <span class="pill {{ 'pill-high' if p['quantity'] == 0 else 'pill-medium' }}">{{ p['quantity'] }} / {{ p['min_stock'] }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

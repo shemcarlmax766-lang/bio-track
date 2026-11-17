@@ -1,0 +1,6 @@
+Flask>=3.1,<4
+gunicorn>=23,<28
+qrcode[pil]>=8.0,<9
+pypdf>=5.0,<8
+openpyxl>=3.1,<4
+reportlab>=4.2,<6

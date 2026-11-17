@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.title }}{% endblock %}
+{% block body %}
+<div class="page-head">
+  <div><h1>{{ meta.title }}</h1>
+    <p class="lead">{{ current_user()['hospital_name'] }} · {{ rows|length }} record(s)
+      {% if kind == 'activity' %}· {{ month }}{% endif %}</p></div>
+  <div class="head-actions">
+    <a class="btn btn-navy" href="{{ url_for('reports.report_pdf', kind=kind, month=month) }}">Download PDF</a>
+    <a class="btn btn-primary" href="{{ url_for('reports.report_xlsx', kind=kind, month=month) }}">Download Excel</a>
+    <a class="btn btn-ghost" href="{{ url_for('reports.reports_index') }}">All reports</a>
+  </div>
+</div>
+<div class="kpi-row" style="margin-bottom:14px">
+  {% for label_text, value in summary %}
+  <div class="metric"><span class="metric-label">{{ label_text }}</span>
+    <span class="metric-value">{{ value }}</span></div>
+  {% endfor %}
+</div>
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in rows %}
+    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+    {% endfor %}
+    {% if not rows %}
+    <tr><td colspan="{{ headers|length }}" class="empty">No records for this report.</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
